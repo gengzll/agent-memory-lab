@@ -19,7 +19,8 @@ Prompt 优化对比实验 —— 让 LLM 稳定调用 save_memory
 
 from __future__ import annotations
 import sys
-sys.path.insert(0, r"D:\work\Memory\01_langgraph_native")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "01_langgraph_native"))
 
 from langchain_core.messages import HumanMessage
 import agent as _agent

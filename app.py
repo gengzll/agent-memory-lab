@@ -33,7 +33,7 @@ st.set_page_config(
 SECTIONS = [
     "🏠 总览(TL;DR)",
     "📚 Memory 四个能力",
-    "🧪 三个 Demo 对比",
+    "🧪 5 个 Demo 对比",
     "📊 Prompt 优化实验",
     "🏭 工业界主流方案",
     "🚀 持久化与生产部署",
@@ -43,7 +43,7 @@ SECTIONS = [
 ]
 
 st.sidebar.title("🧠 Agent Memory")
-st.sidebar.caption("LangGraph / Mem0 / Zep / Letta 实测对比")
+st.sidebar.caption("LangGraph / langmem / Mem0 / Zep / Letta 实测对比")
 section = st.sidebar.radio("章节导航", SECTIONS, label_visibility="collapsed")
 st.sidebar.markdown("---")
 st.sidebar.caption(
@@ -58,39 +58,63 @@ st.sidebar.caption(
 if section == SECTIONS[0]:
     st.title("Agent Memory 实践报告")
     st.markdown(
-        "LangGraph 环境下,**LangGraph 原生 / langmem / Mem0 / Zep / Letta** "
-        "五种 memory 方案的对比、实测与生产选型指南。"
+        "LangGraph 环境下,**5 种 memory 集成方式**的对比、实测与生产选型指南 —— "
+        "从最简单(手写 tool)到最复杂(完整 agent runtime)。"
     )
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("跑通的 Demo", "3 个", "01 / 02 / 03")
+    col1.metric("Demo 总数", "5 个", "3 跑通 / 2 代码示范")
     col2.metric("Prompt 实验", "8 组", "4 变体 × 2 输入")
-    col3.metric("工业界方案", "4 家", "Letta/Mem0/Zep/langmem")
-    col4.metric("踩坑数", "10 个", "全部已修")
+    col3.metric("工业界方案", "5 家", "含 LangGraph 自身")
+    col4.metric("踩坑数", "11 个", "全部已修")
 
     st.markdown("---")
     st.header("TL;DR(三行结论)")
     st.success(
-        "**1. 跑通了三种集成方式** —— LangGraph 原生手写 / langmem 工厂 / Mem0 自动抽取。"
-        "模型用智谱 `glm-4-flash`,embedding 用 `embedding-2`。"
+        "**1. 5 个 demo 按复杂度阶梯组织** —— 01 LangGraph 原生 ⭐ → 02 langmem ⭐⭐ → "
+        "03 Mem0 ⭐⭐⭐ → 04 Zep ⭐⭐⭐⭐ → 05 Letta ⭐⭐⭐⭐⭐。前三个完整跑通,后两个因需起外部服务给出代码示范。"
     )
     st.info(
-        "**2. 工业界 memory 方案分两类** —— **Memory Service**(Mem0、Zep、langmem)即插即用;"
-        "**Agent Runtime**(Letta/MemGPT)跟 LangGraph 是平行替代关系,二选一。"
+        "**2. 工业界 memory 方案有两类设计哲学** —— **Memory Service**"
+        "(LangGraph store / langmem / Mem0 / Zep)即插即用到 LangGraph;"
+        "**Agent Runtime**(Letta/MemGPT)跟 LangGraph 是平行替代,二选一。"
     )
     st.warning(
-        "**3. 生产部署的核心 trade-off** —— LLM 自主调 tool 不稳定(~50% 命中率,实测)→ "
+        "**3. 生产部署核心 trade-off** —— LLM 自主调 tool 不稳定(~50% 命中率,实测)→ "
         "要么换更强模型,要么程序化兜底,要么用 Mem0 那种'后台自动抽取'绕开 LLM 自觉性。"
     )
+
+    st.markdown("---")
+    st.header("5 个 Demo —— 复杂度阶梯")
+    ladder_df = pd.DataFrame([
+        ["01", "langgraph_native",  "⭐",       "无",                  "Hand-rolled save/search tools; LangGraph 一等公民"],
+        ["02", "langmem",           "⭐⭐",     "+langmem",            "工厂封装 60 行 → 2 行;LLM 标准化写入"],
+        ["03", "mem0",              "⭐⭐⭐",   "+mem0 +chroma",       "服务端 LLM 自动抽事实;chroma 默认落盘"],
+        ["04", "zep",               "⭐⭐⭐⭐", "+Zep server",          "知识图谱 + 时序事实(valid_from/to) + 自动 summary"],
+        ["05", "letta",             "⭐⭐⭐⭐⭐", "+Letta server",       "完整 agent runtime(NOT LangGraph plug-in!)三层 memory"],
+    ], columns=["#", "Demo", "复杂度", "外部依赖", "核心特性"])
+    st.dataframe(ladder_df, use_container_width=True, hide_index=True)
+
+    st.code(dedent("""
+         01 langgraph_native        — short-term + long-term + semantic + LLM-managed
+                          ↓ add:    LLM-driven content normalization
+         02 langmem                 — same + factory-generated tools
+                          ↓ add:    automatic fact extraction + default disk persistence
+         03 mem0                    — same + program-controlled writes + chroma persist
+                          ↓ add:    knowledge graph + temporal facts + auto summary
+         04 zep                     — same + Neo4j-backed graph + Graphiti engine
+                          ↓ paradigm shift:
+         05 letta (MemGPT)          — abandons LangGraph; LLM-as-OS pages memory in/out
+    """).strip(), language="text")
 
     st.markdown("---")
     st.header("速览:四家方案怎么选")
     overview_df = pd.DataFrame([
         ["公司有自研 Memory 类",        "demo 01 形态(改 2 行接入)"],
-        ["想最快出原型",                  "Mem0(自带 chroma 落盘)"],
-        ["客服/CRM 需要时序追溯",         "Zep(知识图谱独家)"],
-        ["Agent 要有 persona 持续演化",  "Letta(切换整套框架)"],
-        ["已 deep in LangGraph",         "langmem 或 Mem0"],
+        ["想最快出原型",                  "Mem0(demo 03,自带 chroma 落盘)"],
+        ["客服/CRM 需要时序追溯",         "Zep(demo 04,知识图谱独家)"],
+        ["Agent 要有 persona 持续演化",  "Letta(demo 05,切换整套框架)"],
+        ["已 deep in LangGraph",         "langmem(demo 02)或 Mem0(demo 03)"],
     ], columns=["你的诉求", "推荐方案"])
     st.table(overview_df)
 
@@ -129,34 +153,43 @@ elif section == SECTIONS[1]:
 
     st.info(
         "**关键设计哲学**:LangGraph 把 memory 拆成 `Checkpointer` + `Store` 两层是"
-        "工程上极其正确的设计。你**几乎不需要换 LangGraph 框架本身**,只需要根据业务诉求"
-        "决定 `Store` 后端是 Mem0 / Zep / 自研 / Postgres+pgvector。"
+        "工程上极其正确的设计。你**几乎不需要换 LangGraph 框架本身**(除非选 Letta 那种"
+        "完全平行的 runtime),只需要根据业务诉求决定 `Store` 后端是 Mem0 / Zep / 自研 / "
+        "Postgres+pgvector。"
     )
 
 
 # ====================================================================
-# Section 3: 三个 Demo 对比
+# Section 3: 5 个 Demo 对比
 # ====================================================================
 elif section == SECTIONS[2]:
-    st.title("🧪 三个 Demo 对比")
+    st.title("🧪 5 个 Demo 对比")
 
     st.markdown(
-        "**对照变量**(三个 demo 相同):LangGraph `create_react_agent` + 智谱 `glm-4-flash` "
-        "+ `embedding-2` + 相同测试脚本(alice/t1 写偏好 → alice/t2 跨 thread 验证 → bob/t3 验证隔离)。"
+        "**对照变量**(所有 demo 相同):LangGraph `create_react_agent`(05 Letta 除外) + "
+        "智谱 `glm-4-flash` + `embedding-2` + 相同测试脚本"
+        "(alice/t1 写偏好 → alice/t2 跨 thread 验证 → bob/t3 验证隔离)。"
     )
 
     diff_df = pd.DataFrame([
-        ["save/search 实现",       "手写 @tool ~60 行",  "langmem 工厂 1 行",      "闭包包装 mem.add/search"],
-        ["长期 store 后端",         "InMemoryStore",      "InMemoryStore",         "chromadb(本地落盘)"],
-        ["写入触发机制",            "LLM 自主调 tool",    "LLM 自主调 tool",       "程序化 ingest 每轮自动"],
-        ["内容粒度",               "用户原话",           "LLM 标准化后",          "LLM 提取 + 推理"],
-        ["持久化(默认)",          "❌ 进程结束即丢",    "❌ 进程结束即丢",        "✅ chroma 落盘"],
-        ["接公司自研后端难度",       "最易(改 2 行)",      "难(封装在内部)",          "中(改 vector_store)"],
-    ], columns=["维度", "01 LangGraph 原生", "02 langmem", "03 Mem0"])
-    st.dataframe(diff_df, use_container_width=True)
+        ["save/search 实现",        "手写 @tool ~60 行", "langmem 工厂 1 行", "闭包包装 mem.add/search", "闭包包装 zep client",      "Letta 内置(无需写)"],
+        ["长期存储后端",             "InMemoryStore",     "InMemoryStore",     "chromadb(本地落盘)",   "Zep server(Neo4j+PG)",   "Letta server"],
+        ["写入触发机制",             "LLM 自主调 tool",    "LLM 自主调 tool",   "程序化 ingest 自动",     "程序化 ingest 自动",       "LLM 自主调内置 tool"],
+        ["内容粒度",                "用户原话",          "LLM 标准化后",       "LLM 提取 + 推理",         "facts + graph + summary",  "core / recall / archival 三层"],
+        ["持久化(默认)",           "❌ 进程结束即丢",    "❌ 进程结束即丢",    "✅ chroma 落盘",          "✅ Zep server",            "✅ Letta server"],
+        ["跑通情况",                "✅",                "✅",                "✅",                      "代码示范(需起服务)",      "代码示范(需起服务)"],
+        ["接公司自研后端难度",        "最易(改 2 行)",      "难(封装在内部)",     "中(改 vector_store)",  "极难(整套服务)",          "不适合"],
+    ], columns=["维度", "01 LangGraph 原生", "02 langmem", "03 Mem0", "04 Zep", "05 Letta"])
+    st.dataframe(diff_df, use_container_width=True, hide_index=True)
 
     st.markdown("---")
-    tabs = st.tabs(["01 LangGraph 原生", "02 langmem", "03 Mem0"])
+    tabs = st.tabs([
+        "01 LangGraph 原生 ⭐",
+        "02 langmem ⭐⭐",
+        "03 Mem0 ⭐⭐⭐",
+        "04 Zep ⭐⭐⭐⭐",
+        "05 Letta ⭐⭐⭐⭐⭐",
+    ])
 
     # ------------------- 01 -------------------
     with tabs[0]:
@@ -206,15 +239,11 @@ elif section == SECTIONS[2]:
                 ======================================================================
                 [user=alice thread=t2]
                   User: 帮我写一段计算夏普比率的代码
-                  Bot : 好的,夏普比率是一种衡量投资组合风险调整后收益的指标。
-                        以下是一个使用Python计算夏普比率的代码示例:
+                  Bot : 好的,以下是Python代码示例:
                         ```python
                         import numpy as np
                         def calculate_sharpe_ratio(returns, risk_free_rate):
-                            average_return = np.mean(returns)
-                            std_dev = np.std(returns)
-                            sharpe_ratio = (average_return - risk_free_rate) / std_dev
-                            return sharpe_ratio
+                            return (np.mean(returns) - risk_free_rate) / np.std(returns)
                         ```
 
                 ======================================================================
@@ -249,7 +278,6 @@ elif section == SECTIONS[2]:
         ''').strip(), language="python")
 
         st.subheader("实测输出 — 关键差异:LLM 标准化")
-        st.markdown("**store 里实际写入的内容(对比 01)**:")
         col_a, col_b = st.columns(2)
         with col_a:
             st.caption("01 — 用户原话")
@@ -273,7 +301,6 @@ elif section == SECTIONS[2]:
 
         st.subheader("关键代码 — 程序化 ingest")
         st.code(dedent('''
-            # 不靠 LLM 自觉,每轮 chat 后强制调用
             def ingest_turn(mem, user_id, user_text, bot_text):
                 mem.add(
                     messages=[
@@ -320,6 +347,136 @@ elif section == SECTIONS[2]:
             "用户原话里没有的事实。回答更'懂'用户,但严肃业务有合规风险。"
         )
 
+    # ------------------- 04 -------------------
+    with tabs[3]:
+        st.subheader("一句话定位")
+        st.info("**Zep 在 Mem0 自动抽取之上,加知识图谱 + 时序事实 + 自动 summary**。"
+                "需要起 Zep 服务(Docker / Cloud)。本 demo 未跑通,代码作为示范。")
+
+        st.subheader("关键代码 — Zep 三层数据模型")
+        st.code(dedent('''
+            from zep_cloud.types import Message
+
+            def ingest_turn(client, session_id, user_text, bot_text):
+                """服务端会自动抽取 facts + 更新 graph + 生成 summary"""
+                client.memory.add(
+                    session_id=session_id,
+                    messages=[
+                        Message(role="user", role_type="user", content=user_text),
+                        Message(role="assistant", role_type="assistant", content=bot_text),
+                    ],
+                )
+
+            @tool
+            def search_memory(query: str, *, config: RunnableConfig):
+                user_id = config["configurable"]["user_id"]
+                res = client.memory.search_sessions(
+                    user_id=user_id,
+                    text=query,
+                    search_scope="facts",      # 或 "messages" / "graph"
+                    limit=5,
+                )
+                ...
+        ''').strip(), language="python")
+
+        st.subheader("Zep 独家能力")
+        zep_caps = pd.DataFrame([
+            ["知识图谱",   "实体(Alice / Python / 量化交易) + 关系('Alice works in 量化交易')", "客服/CRM 用户画像"],
+            ["时序追溯",   "`fact.valid_from='2026-05-01'` / `valid_to='2026-08-15'`",            "心理咨询、销售跟进"],
+            ["Session 摘要", "自动生成对话摘要,减少 context 长度",                                "长会话"],
+        ], columns=["能力", "示例", "适合场景"])
+        st.dataframe(zep_caps, use_container_width=True, hide_index=True)
+
+        st.subheader("启动 Zep 服务")
+        st.code(dedent('''
+            # 本地起 Zep
+            docker run -p 8000:8000 ghcr.io/getzep/zep:latest
+            export ZEP_BASE_URL=http://localhost:8000
+
+            # 或 Zep Cloud
+            export ZEP_API_KEY=...
+        ''').strip(), language="bash")
+
+        st.warning(
+            "**部署门槛最高**:本地需 Docker + Neo4j + Postgres + Zep server。"
+            "检索能力最强(三种 search_scope:messages / facts / graph),但完全黑盒,自定义能力受限。"
+        )
+
+    # ------------------- 05 -------------------
+    with tabs[4]:
+        st.subheader("一句话定位")
+        st.warning("**Letta 抛弃 LangGraph**,是个完整 agent runtime。LLM as OS,"
+                   "自己 page memory:core memory 始终在 context,recall memory 是历史消息库,"
+                   "archival memory 是无限大磁盘。**不是 plug-in,是平行替代框架**。")
+
+        st.subheader("关键代码 — 不再有 `create_react_agent`")
+        st.code(dedent('''
+            from letta_client import Letta
+
+            client = Letta(base_url="http://localhost:8283")
+
+            # 创建 agent —— 持久化的有 ID 的实体,跨 session 续聊
+            agent = client.agents.create(
+                name="agent_for_alice",
+                memory_blocks=[
+                    {"label": "persona", "value": "You are a helpful assistant..."},
+                    {"label": "human",   "value": "User is Alice. Update as you learn..."},
+                ],
+                model="openai/gpt-4o-mini",
+                embedding="openai/text-embedding-3-small",
+            )
+
+            # 对话
+            response = client.agents.messages.create(
+                agent_id=agent.id,
+                messages=[{"role": "user", "content": "我叫 Alice,在量化交易做研究员"}],
+            )
+            # Letta 内部 LLM 自动调:
+            #   - core_memory_append / core_memory_replace 更新 human block
+            #   - archival_memory_insert 存到长期档案
+        ''').strip(), language="python")
+
+        st.subheader("Letta 三层 memory 架构")
+        st.code(dedent("""
+            ┌────────────────────────────────────────────────────────┐
+            │  Context window (有限,例如 8k tokens)                 │
+            │  ┌──────────────────────────────────────────────────┐  │
+            │  │ Core Memory(始终在 context):                     │  │
+            │  │   - persona block: "You are..."                   │  │
+            │  │   - human block:   "User is Alice, quant..."      │  │
+            │  └──────────────────────────────────────────────────┘  │
+            │  ┌──────────────────────────────────────────────────┐  │
+            │  │ Recent messages(滑动窗口)                        │  │
+            │  └──────────────────────────────────────────────────┘  │
+            └────────────────────────────────────────────────────────┘
+                                      ↕ LLM 调 tool 主动 page in/out
+            ┌────────────────────────────────────────────────────────┐
+            │  Recall Memory(历史消息库 — 全量保存)                  │
+            │  conversation_search(query) 检索旧对话                  │
+            └────────────────────────────────────────────────────────┘
+            ┌────────────────────────────────────────────────────────┐
+            │  Archival Memory(无限大事实库)                         │
+            │  archival_memory_insert / archival_memory_search        │
+            └────────────────────────────────────────────────────────┘
+        """).strip(), language="text")
+
+        st.subheader("启动 Letta 服务")
+        st.code(dedent('''
+            pip install letta letta-client
+            letta server                          # 默认 http://localhost:8283
+            export OPENAI_API_KEY=sk-...
+
+            # 或 ZhipuAI:走 OpenAI 兼容
+            export OPENAI_API_KEY=<zhipu-key>
+            export OPENAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4/
+        ''').strip(), language="bash")
+
+        st.error(
+            "**最大区别**:Letta 不能即插即用 LangGraph。如果选 Letta,要重写整个 agent 框架。"
+            "唯一支持 'agent 自演化人格' 的方案 — agent 有持久化身份,memory 跟 agent 绑定。"
+            "Token 成本最高(core memory 永驻 context)。"
+        )
+
 
 # ====================================================================
 # Section 4: Prompt 优化实验
@@ -331,6 +488,7 @@ elif section == SECTIONS[3]:
         "'嘴上说已记住但实际没调 `save_memory` tool'。"
         "用 4 种 prompt × 2 种输入测命中率。"
     )
+    st.caption("📁 完整脚本:`experiments/prompt_variants.py`")
 
     st.markdown("---")
     st.header("4 种 Prompt 变体")
@@ -388,12 +546,11 @@ elif section == SECTIONS[3]:
             result = agent.invoke({"messages": [HumanMessage(content=text)]},
                                   config={"configurable": {"thread_id": thread_id,
                                                             "user_id": user_id}})
-            # 检查 LLM 实际是否调了 save_memory
             tool_calls = [m for m in result["messages"]
                           if getattr(m, "type", None) == "tool"
                           and m.name == "save_memory"]
 
-            # 没调 + 用户文本含触发词 → 程序化补一次
+            # LLM 漏调 + 文本含触发词 → 程序化补一次
             if not tool_calls:
                 for pattern, category in TRIGGER_PATTERNS:
                     if re.search(pattern, text):
@@ -414,10 +571,10 @@ elif section == SECTIONS[3]:
 
 
 # ====================================================================
-# Section 5: 工业界主流方案
+# Section 5: 工业界主流方案 — 5 家全景
 # ====================================================================
 elif section == SECTIONS[4]:
-    st.title("🏭 工业界主流方案对比")
+    st.title("🏭 工业界主流方案 —— 5 家全景")
 
     st.header("⚠️ 名称澄清:MemGPT / Letta / langmem")
     st.code(dedent("""
@@ -431,7 +588,7 @@ elif section == SECTIONS[4]:
     """).strip(), language="text")
     st.info(
         "**MemGPT ↔ Letta**:同一团队,同一项目,改了名。\n\n"
-        "**langmem**:**LangChain 团队**独立开发,**思路借鉴 MemGPT**(LLM 自管 memory),"
+        "**langmem**:**LangChain 团队**独立开发,**思路借鉴 MemGPT**,"
         "实现轻量化,**不是 Letta 的 fork**。"
     )
 
@@ -442,9 +599,10 @@ elif section == SECTIONS[4]:
                │
                ├─── Memory Service 类 ────────────────── 即插即用 ✓
                │    跟 agent 框架平行,LangGraph 可挂载
-               │    ├─ Mem0     (Python SDK,可选起服务)
-               │    ├─ Zep      (必须起服务 / Cloud)
-               │    └─ langmem  (LangChain 同生态)
+               │    ├─ LangGraph store (一等公民,自带)
+               │    ├─ langmem         (LangChain 同生态)
+               │    ├─ Mem0            (Python SDK,可选起服务)
+               │    └─ Zep             (必须起服务 / Cloud)
                │
                └─── Agent Runtime 类 ─────────────────── 平行替代 ✗
                     自己一套 agent 框架,不和 LangGraph 共存
@@ -452,35 +610,27 @@ elif section == SECTIONS[4]:
     """).strip(), language="text")
 
     st.markdown("---")
-    st.header("四家全景对比")
+    st.header("5 家全景对比")
     big_df = pd.DataFrame([
-        ["一句话定位",          "LLM as OS,自己管 memory", "Memory as Service,后台抽", "知识图谱 + 时序事实库", "LangChain 出的 memory 工具包"],
-        ["是 Agent Runtime?",  "✅",                       "❌",                       "❌",                     "❌"],
-        ["抽取由谁做",          "LLM 自己用 tool",          "服务端 LLM 自动",          "服务端(facts+graph+summary)", "LLM 自己用 tool(工厂封装)"],
-        ["数据模型",            "core/recall/archival",     "user/session/agent",       "user→session→message + KG", "LangGraph store(KV+向量)"],
-        ["时序追溯",            "弱",                       "无",                       "★ Graphiti valid_from/valid_to", "无"],
-        ["知识图谱",            "无",                       "无",                       "★ 有(基于 Neo4j)",      "无"],
-        ["部署门槛",            "中(起 Letta server)",     "低(pip install)",          "高(Docker+Neo4j+Postgres)", "极低"],
-        ["与 LangGraph 关系",   "平行替代",                 "plug-in",                  "plug-in",                "plug-in(同生态)"],
-        ["token 成本",          "高(core memory 永驻)",   "中",                       "中",                     "中"],
-        ["典型场景",            "陪伴 / persona 演化",     "通用 chatbot,快速原型",    "客服/CRM/心理咨询",      "LangGraph 标准用法"],
-    ], columns=["维度", "Letta (MemGPT)", "Mem0", "Zep", "langmem"])
+        ["类型",                "Memory Service",                  "Memory Service",                   "Memory Service",            "Memory Service",                "Agent Runtime"],
+        ["一句话",              "LangGraph 自带 KV+向量 store,你自己写 tool", "工厂封装 LangGraph store",       "服务端 LLM 自动抽事实",     "知识图谱 + 时序事实",            "LLM as OS,自己管 memory"],
+        ["抽取由谁做",          "LLM 自己用 tool",                  "LLM 自己用 tool(内部加 LLM 标准化)",  "服务端 LLM 自动",            "服务端(facts+graph+summary)",  "LLM 自己用内置 tool"],
+        ["数据模型",            "KV + 向量 + namespace",           "同 LangGraph store",                "user/session/agent",         "user→session→message + KG",     "core/recall/archival"],
+        ["时序追溯",            "自己加字段",                       "自己加字段",                         "无",                         "★ Graphiti valid_from/to",      "弱"],
+        ["知识图谱",            "无",                              "无",                                 "无",                         "★ 有(基于 Neo4j)",             "无"],
+        ["部署门槛",            "无(进程内)",                      "无(进程内)",                         "低(pip install)",            "高(Docker+Neo4j+Postgres)",     "中-高(Letta server)"],
+        ["与 LangGraph 关系",   "一等公民",                         "plug-in",                           "plug-in",                    "plug-in",                       "平行替代"],
+        ["token 成本",          "中",                              "中-高(多次 LLM)",                    "中",                         "中",                            "高(core memory 永驻)"],
+        ["对应 Demo",           "01",                              "02",                                 "03",                         "04",                            "05"],
+        ["典型场景",            "自研后端集成",                     "LangGraph 标准用法",                  "通用 chatbot,快速原型",      "客服/CRM/心理咨询",             "陪伴 / persona 演化"],
+    ], columns=["维度", "LangGraph 原生", "langmem", "Mem0", "Zep", "Letta (MemGPT)"])
     st.dataframe(big_df, use_container_width=True, hide_index=True)
 
     st.markdown("---")
     st.success(
-        "**关键洞察**:四家的开源版底层向量库都差不多(Qdrant / pgvector / Weaviate / Chroma)。"
+        "**关键洞察**:五家的开源版底层向量库都差不多(Qdrant / pgvector / Weaviate / Chroma)。"
         "**差异不在存储,在抽取流程的设计哲学。**"
     )
-
-    st.header("Demo 对应业界产品")
-    map_df = pd.DataFrame([
-        ["demo 01 手写 tool",   "≈ Letta 简化版(去掉 server)"],
-        ["demo 02 langmem",     "= langmem 本身"],
-        ["demo 03 Mem0",        "= Mem0 本身"],
-        ["demo 04 Zep(未跑)", "= Zep 本身"],
-    ], columns=["我们的 Demo", "对应业界产品"])
-    st.table(map_df)
 
 
 # ====================================================================
@@ -562,30 +712,30 @@ elif section == SECTIONS[6]:
         │   └─ 是 → demo 01 形态(改 2 行 store.put / store.search 接入)
         │
         ├─ 没有自研,想最快出原型?
-        │   └─ Mem0(SDK 即用,自带 chroma 落盘,但接受英文事实 + 推理)
+        │   └─ Mem0(demo 03)— SDK 即用,自带 chroma 落盘
         │
         ├─ 需要长期事实演化 + 时序追溯(客服 / CRM / 心理咨询)?
-        │   └─ Zep(部署门槛高,但知识图谱独家)
+        │   └─ Zep(demo 04)— 部署高,但知识图谱独家
         │
         ├─ Agent 要有"人格"持续演化(陪伴 / 教练)?
-        │   └─ Letta(切换整个 agent 框架,不再用 LangGraph)
+        │   └─ Letta(demo 05)— 切换整个 agent 框架,不再用 LangGraph
         │
         └─ 已 deep in LangGraph,只想 plug 一个 memory?
-            ├─ 简单场景 → langmem(demo 02,几行接入)
+            ├─ 简单场景 → langmem(demo 02)
             └─ 想要事实抽取 → Mem0(demo 03)
     """).strip(), language="text")
 
     st.markdown("---")
     st.header("不同业务场景对应方案")
     scene_df = pd.DataFrame([
-        ["内部工具 / demo",                    "demo 01 全内存",                       "0 依赖,跑通即可"],
-        ["通用 chatbot(中等流量)",            "demo 03 Mem0 + chroma 落盘",          "自动抽取,持久化开箱即用"],
-        ["通用 chatbot(高流量,生产)",        "demo 01 + PostgresStore + Redis checkpointer", "性能/成本/可控性"],
-        ["客服系统",                           "Zep(本地 Docker 或 Cloud)",            "时序事实 + 图谱必须"],
-        ["销售 CRM",                          "Zep",                                  "同上"],
-        ["心理咨询 / 长期陪伴",                "Letta 或 Zep",                         "persona 演化 / 时序追溯"],
-        ["企业内合规要求(金融、医疗)",        "demo 01 + 自研后端 + 审计日志",         "数据自控,不能用 SaaS"],
-        ["出海 SaaS",                         "Mem0 Cloud / Zep Cloud",               "省运维,合规靠厂商"],
+        ["内部工具 / demo",                    "01 全内存",                        "0 依赖"],
+        ["通用 chatbot(中等流量)",            "03 Mem0 + chroma 落盘",            "自动抽取,持久化开箱即用"],
+        ["通用 chatbot(高流量,生产)",        "01 + PostgresStore + Redis checkpointer", "性能/成本/可控性"],
+        ["客服系统",                           "04 Zep",                           "时序事实 + 图谱必须"],
+        ["销售 CRM",                          "04 Zep",                           "同上"],
+        ["心理咨询 / 长期陪伴",                "05 Letta 或 04 Zep",               "persona 演化 / 时序追溯"],
+        ["企业内合规(金融、医疗)",            "01 + 自研后端 + 审计日志",          "数据自控,不能用 SaaS"],
+        ["出海 SaaS",                         "Mem0 Cloud / Zep Cloud",           "省运维,合规靠厂商"],
     ], columns=["场景", "推荐", "理由"])
     st.dataframe(scene_df, use_container_width=True, hide_index=True)
 
@@ -647,6 +797,7 @@ elif section == SECTIONS[7]:
         ["8",  "LangGraph 1.0",      "`create_react_agent` deprecation 警告",                    "仍可用,推荐迁 `from langchain.agents import create_agent`"],
         ["9",  "spaCy",              "mem0 抱怨 spaCy 没装",                                     "可选 `pip install mem0ai[nlp]`,不装也能跑"],
         ["10", "LLM tool calling",   "glm-4-flash 自主调 tool 不稳定(temperature=0 也不行)",   "prompt 优化 + 程序化兜底(详见 Section 4)"],
+        ["11", "Streamlit 1.37",     "`width=\"stretch\"` 不支持(1.40+ 才有)",                  "改 `use_container_width=True`"],
     ], columns=["#", "模块", "问题", "解决"])
     st.dataframe(bugs_df, use_container_width=True, hide_index=True)
 

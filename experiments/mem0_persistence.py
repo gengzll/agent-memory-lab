@@ -1,6 +1,7 @@
 """新进程里查 alice 的 memory 还在不在 —— 验证 03 是否真的持久化"""
 import sys
-sys.path.insert(0, r"D:\work\Memory\03_mem0")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "03_mem0"))
 from memory_module import build_memory
 
 m = build_memory()

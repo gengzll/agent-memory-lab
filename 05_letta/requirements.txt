@@ -1,0 +1,6 @@
+letta-client>=0.1.0
+# Letta server 单独装(client/server 分离):
+#   pip install letta
+#   letta server                              # 在 8283 端口启 server
+# 或 Docker:
+#   docker run -p 8283:8283 letta/letta:latest
