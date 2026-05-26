@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# Memory 落盘数据(不要传到 GitHub)
+mem0_chroma/
+*.sqlite
+*.sqlite3
+*.db
+checkpoints.sqlite
+
+# 环境变量(API key)
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# pip 临时文件
+requirements_new.txt

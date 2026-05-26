@@ -1,0 +1,5 @@
+langgraph>=1.2.0
+langchain-openai>=1.2.0
+langchain-community>=0.3.0
+zhipuai
+langmem>=0.0.30
