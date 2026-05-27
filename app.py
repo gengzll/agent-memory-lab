@@ -1,9 +1,13 @@
 """
 Agent Memory 实践报告 — Streamlit 版
 
-启动:
+启动(在 repo 根目录执行):
+  # PowerShell
   $env:PYTHONIOENCODING="utf-8"
-  streamlit run "D:\\work\\Memory\\app.py"
+  streamlit run app.py
+
+  # bash
+  PYTHONIOENCODING=utf-8 streamlit run app.py
 """
 
 from __future__ import annotations

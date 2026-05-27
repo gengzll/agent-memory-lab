@@ -68,6 +68,11 @@ def build_store(use_embeddings: bool = True) -> BaseStore:
     use_embeddings=False: 纯 KV,store.search() 只按 namespace 列举(无 OPENAI_API_KEY 时降级)
 
     生产换 PostgresStore(同样支持 embeddings):
+
+    ⚠️ PostgresStore 不在 langgraph 主包里 —— 需要单独安装:
+        pip install langgraph-store-postgres
+
+    然后:
         from langgraph.store.postgres import PostgresStore
         return PostgresStore.from_conn_string(os.environ["PG_DSN"])
     """

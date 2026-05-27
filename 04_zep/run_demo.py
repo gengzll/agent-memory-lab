@@ -11,8 +11,14 @@
     docker run -p 8000:8000 ghcr.io/getzep/zep:latest
     export ZEP_BASE_URL=http://localhost:8000        # self-hosted
 
-    # 2. LLM 走智谱(跟 01/02/03 一致)
+    # 2. 本 demo client 端 LLM(跟 01/02/03 一致,走智谱)
     export ZHIPUAI_API_KEY=...
+
+    ⚠️ 注意:Zep server **自己也要 LLM** 做事实抽取/图谱构建,
+    它读自己的环境变量(通常 OPENAI_API_KEY)。如果你 self-host Zep
+    并希望服务端也用智谱,得按 zep 文档配 ZhipuAI provider;否则
+    Zep 默认尝试 OpenAI,事实抽取会静默失败。
+    详见:https://help.getzep.com/llms
 """
 
 from __future__ import annotations
