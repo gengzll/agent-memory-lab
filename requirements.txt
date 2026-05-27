@@ -1,19 +1,31 @@
-# 三个 demo (01 / 02 / 03) 全跑的合并依赖清单
-# 适配:LangGraph 1.x + ZhipuAI (智谱)
-# 安装:
+# Combined deps for demos 01 / 02 / 03 + Streamlit report.
+# Install:
 #   pip install -r requirements.txt
-# 国内源:
+# China mirror:
 #   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
-# ----- 三个版本都要 -----
+# ----- Core LangGraph + LLM (all demos) -----
 langgraph>=1.2.0
 langchain-openai>=1.2.0
 langchain-community>=0.3.0
 zhipuai
 
-# ----- 仅 02_langmem 需要 -----
-langmem>=0.0.30
+# ----- Memory backends -----
+langmem>=0.0.30            # demo 02
+mem0ai>=2.0.2              # demo 03 — 2.0 has breaking API changes; do NOT downgrade to 0.1.x
+chromadb                   # demo 03 vector store (also a mem0 dep)
 
-# ----- 仅 03_mem0 需要 -----
-mem0ai>=0.1.118
-chromadb
+# ----- Streamlit interactive report (app.py) -----
+streamlit>=1.37
+pandas>=2.0
+
+# ----- Optional persistence backends (NOT auto-installed; install on demand) -----
+# Uncomment if you call build_checkpointer(sqlite_path=...) or follow the
+# REPORT § 10.4 production checklist:
+# langgraph-checkpoint-sqlite       # local SQLite checkpointer
+# langgraph-checkpoint-postgres     # production PostgresSaver
+# langgraph-store-postgres          # production PostgresStore + pgvector
+
+# ----- Demos 04 / 05 (external services, see their own requirements.txt) -----
+# zep-cloud>=2.0    # demo 04 — also: docker run -p 8000:8000 ghcr.io/getzep/zep:latest
+# letta-client      # demo 05 — also: pip install letta && letta server

@@ -28,8 +28,14 @@ SYSTEM_PROMPT = """你是一个有长期记忆的对话助手。
 """
 
 
-def build_agent(model_name: str = "gpt-4o-mini") -> tuple[Any, Any]:
-    llm = ChatOpenAI(model=model_name, temperature=0)
+def build_agent(model_name: str = "glm-4-flash") -> tuple[Any, Any]:
+    import os
+    llm = ChatOpenAI(
+        model=model_name,
+        temperature=0,
+        api_key=os.environ["ZHIPUAI_API_KEY"],
+        base_url="https://open.bigmodel.cn/api/paas/v4/",
+    )
     checkpointer = build_checkpointer()
     client = build_zep_client()
     tools = make_memory_tools(client)

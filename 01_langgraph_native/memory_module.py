@@ -43,12 +43,17 @@ def build_checkpointer(sqlite_path: Optional[str] = None):
     sqlite_path=None: MemorySaver,进程内,重启即丢(适合 demo / 单元测试)
     sqlite_path=str : SqliteSaver,落盘,重启可恢复(生产基础款)
 
-    生产环境分布式部署换 PostgresSaver:
+    ⚠️ SqliteSaver 不在 langgraph 主包里 —— 需要单独安装:
+        pip install langgraph-checkpoint-sqlite
+
+    生产环境分布式部署换 PostgresSaver(同样需要额外安装):
+        pip install langgraph-checkpoint-postgres
         from langgraph.checkpoint.postgres import PostgresSaver
         return PostgresSaver.from_conn_string(os.environ["PG_DSN"])
     """
     if sqlite_path is None:
         return MemorySaver()
+    # 这一行只有 sqlite_path 非 None 时才执行,所以默认 demo 不需要装该包
     from langgraph.checkpoint.sqlite import SqliteSaver
     return SqliteSaver.from_conn_string(sqlite_path)
 

@@ -2,5 +2,5 @@ langgraph>=1.2.0
 langchain-openai>=1.2.0
 langchain-community>=0.3.0
 zhipuai
-mem0ai>=0.1.118
+mem0ai>=2.0.2  # 2.0 has breaking API changes (filters / top_k); do NOT downgrade to 0.1.x
 chromadb

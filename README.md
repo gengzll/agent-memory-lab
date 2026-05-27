@@ -6,7 +6,7 @@
 
 Production chatbots need memory. The ecosystem offers many options — LangGraph store, langmem, Mem0, Zep, Letta/MemGPT — but how do they actually compare?
 
-This repo provides **5 runnable demos** + a **prompt-engineering experiment**, with:
+This repo provides **5 demos** (3 fully tested end-to-end on your laptop, 2 code templates that need external services to run) + a **prompt-engineering experiment**, with:
 
 - Exact code differences between the 5 approaches
 - Empirical results (what gets stored, what gets recalled, what gets lost)

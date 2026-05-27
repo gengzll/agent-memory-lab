@@ -5,10 +5,14 @@
 额外:每个 session 启动前要 ensure_user / ensure_session。
 
 前置:
+    # 1. Zep 服务(二选一)
     export ZEP_API_KEY=...                           # Zep Cloud
-    或
+    # 或:
     docker run -p 8000:8000 ghcr.io/getzep/zep:latest
     export ZEP_BASE_URL=http://localhost:8000        # self-hosted
+
+    # 2. LLM 走智谱(跟 01/02/03 一致)
+    export ZHIPUAI_API_KEY=...
 """
 
 from __future__ import annotations
@@ -59,10 +63,10 @@ def dump_facts(client, user_id: str) -> None:
 
 
 def main() -> None:
-    if not os.getenv("OPENAI_API_KEY"):
-        raise RuntimeError("请先设置 OPENAI_API_KEY 环境变量")
+    if not os.getenv("ZHIPUAI_API_KEY"):
+        raise RuntimeError("请先设置 ZHIPUAI_API_KEY 环境变量(LLM 用智谱 glm-4-flash)")
 
-    agent, client = build_agent(model_name="gpt-4o-mini")
+    agent, client = build_agent(model_name="glm-4-flash")
 
     # Zep 需要先创建 user 和 session
     ensure_user(client, "alice")

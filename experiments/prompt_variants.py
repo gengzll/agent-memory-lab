@@ -1,7 +1,7 @@
 """
 Prompt 优化对比实验 —— 让 LLM 稳定调用 save_memory
 
-3 种 prompt × 2 种输入 = 6 组对比
+4 种 prompt × 2 种输入 = 8 组对比
 
 变体:
   V0 baseline   — 原 prompt (温和引导)

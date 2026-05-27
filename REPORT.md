@@ -708,6 +708,14 @@ python "01_langgraph_native\run_demo.py"   # 或 02 / 03
 
 ### 10.4 生产改造最小清单(基于 demo 01)
 
+> ⚠️ **持久化 backend 不在 langgraph 主包里,要单独装**:
+> ```bash
+> # SQLite checkpointer
+> pip install langgraph-checkpoint-sqlite
+> # Postgres checkpointer + store(生产推荐)
+> pip install langgraph-checkpoint-postgres langgraph-store-postgres
+> ```
+
 1. `build_checkpointer`: `MemorySaver()` → `PostgresSaver.from_conn_string(...)`
 2. `build_store`: `InMemoryStore(index={...})` → `PostgresStore.from_conn_string(..., index={...})`
 3. `save_memory` 函数体: `store.put(...)` → 调你们自研 Memory 的 save 接口

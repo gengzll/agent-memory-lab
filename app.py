@@ -901,6 +901,28 @@ elif section == SECTIONS[8]:
             输入: "帮我写个函数"
               (无需调用 memory tool,直接回复代码)
         """).strip(),
+
+        "V3 + 自检 (承诺词反向校验)": dedent("""
+            你是一个有长期记忆的对话助手。
+
+            【记忆规则】用户透露偏好/事实/身份时,**先调用 save_memory,再回复**。
+
+            【示例】
+            输入: "我叫 Alice"
+              1. tool_call: save_memory(content="用户的名字是 Alice", category="fact")
+              2. 回复: "你好,Alice!"
+
+            输入: "帮我写个函数"
+              (无需调用 memory tool,直接回复代码)
+
+            【最后自检 - 关键!!】
+            在生成最终回复前,自检一次:
+              问: 我的回复里有没有"记住了" / "已记住" / "记下了" / "OK 没问题" 这种承诺词?
+              问: 如果有,我之前调用过 save_memory tool 吗?
+
+            如果答案是"有承诺词但没调过 tool" —— 这是严重的"假装记忆"错误。
+            请回退,先调用 save_memory 让事实真正落到 store,再生成回复。
+        """).strip(),
     }
 
     col1, col2 = st.columns([1, 2])
@@ -920,7 +942,8 @@ elif section == SECTIONS[8]:
         if not os.getenv("ZHIPUAI_API_KEY"):
             st.error("请先填入 ZHIPUAI_API_KEY")
         else:
-            sys.path.insert(0, r"D:\work\Memory\01_langgraph_native")
+            from pathlib import Path
+            sys.path.insert(0, str(Path(__file__).resolve().parent / "01_langgraph_native"))
 
             try:
                 with st.spinner("调用智谱 glm-4-flash,等 5-15 秒..."):
