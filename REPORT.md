@@ -12,6 +12,16 @@
 
 ---
 
+## 📌 项目范围声明
+
+> **本项目仅聚焦 "memory" 这一维度的方案对比**。Agent 框架本身(LangGraph / Letta / CrewAI / AutoGen / LlamaIndex)是另一个独立的选型问题,本 repo **不展开**。我们假定 **LangGraph 是你的主框架**,memory 后端从 5 家里选。
+>
+> **唯一例外**:Letta(demo 05)本身是个**完整的 agent runtime**,会替代 LangGraph。我们仍把它纳入,是因为它的"三层 memory"架构(core/recall/archival)是 memory 领域绕不开的设计思想,即便最终不选它,理解它也有价值。
+>
+> 如果你的主框架不是 LangGraph(用了 LlamaIndex / CrewAI / AutoGen),它们各自自带 memory 子系统,**直接用框架内置**通常比迁移到本 repo 的方案更顺手 — 我们不在这里展开。
+
+---
+
 ## 目录
 
 1. [背景与目标](#1-背景与目标)
@@ -482,6 +492,7 @@ def chat(agent, store, text, thread_id, user_id):
 
 | 维度 | LangGraph 原生 | langmem | Mem0 | Zep | Letta (MemGPT) |
 |---|---|---|---|---|---|
+| **GitHub Stars** (2026-05) | [33.3k](https://github.com/langchain-ai/langgraph) (整个框架) | [1.5k](https://github.com/langchain-ai/langmem) | [**57k**](https://github.com/mem0ai/mem0) ⭐最高 | [4.6k](https://github.com/getzep/zep) | [23k](https://github.com/letta-ai/letta) |
 | **类型** | Memory Service | Memory Service | Memory Service | Memory Service | **Agent Runtime** |
 | **一句话** | 自带 KV+向量 store,你自己写 tool | 工厂封装 LangGraph store | 服务端 LLM 自动抽事实 | 知识图谱 + 时序事实 | LLM as OS,自己管 memory |
 | **抽取由谁做** | LLM 自己用 tool | LLM 自己用 tool(langmem 内部加 LLM 标准化) | 服务端 LLM 每轮自动 | 服务端(facts+graph+summary) | LLM 自己用内置 tool |

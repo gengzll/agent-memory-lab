@@ -13,15 +13,21 @@ This repo provides **5 demos** (3 fully tested end-to-end on your laptop, 2 code
 - Real-world trade-offs (persistence, token cost, deployment overhead)
 - A decision framework for choosing the right one
 
+## 📌 Scope of this lab
+
+> **This repo focuses on the *memory* dimension only.** Agent framework selection (LangGraph vs Letta vs CrewAI vs AutoGen vs LlamaIndex) is a separate orthogonal question we do **not** unpack here. We assume **LangGraph is your main framework** and explore which memory backend fits — with one explicit exception: Letta (demo 05) is itself a full agent runtime that *replaces* LangGraph, included because its three-tier memory architecture is too important to skip.
+
 ## 📚 The 5 demos — from simple to complex
 
-| # | Demo | Complexity | External deps | Core idea |
-|---|---|---|---|---|
-| 01 | [`01_langgraph_native`](01_langgraph_native/) | ⭐ | none | Hand-rolled `save_memory` / `search_memory` tools; `InjectedStore` + `RunnableConfig` 解耦 |
-| 02 | [`02_langmem`](02_langmem/) | ⭐⭐ | +langmem | Factory tools replace 60 lines with 2; LLM standardizes content before write |
-| 03 | [`03_mem0`](03_mem0/) | ⭐⭐⭐ | +mem0 +chroma | **Server-side LLM auto-extracts** facts every turn; persists to disk by default |
-| 04 | [`04_zep`](04_zep/) | ⭐⭐⭐⭐ | +Zep server | Knowledge graph + temporal facts (`valid_from` / `valid_to`) + auto session summary |
-| 05 | [`05_letta`](05_letta/) | ⭐⭐⭐⭐⭐ | +Letta server | **Full agent runtime** (NOT a LangGraph plug-in!) — three-tier memory: core / recall / archival |
+| # | Demo | GitHub ⭐ | Complexity | External deps | Core idea |
+|---|---|---|---|---|---|
+| 01 | [`01_langgraph_native`](01_langgraph_native/) | [33.3k](https://github.com/langchain-ai/langgraph) (whole framework) | ⭐ | none | Hand-rolled `save_memory` / `search_memory` tools; `InjectedStore` + `RunnableConfig` 解耦 |
+| 02 | [`02_langmem`](02_langmem/) | [1.5k](https://github.com/langchain-ai/langmem) | ⭐⭐ | +langmem | Factory tools replace 60 lines with 2; LLM standardizes content before write |
+| 03 | [`03_mem0`](03_mem0/) | [**57k**](https://github.com/mem0ai/mem0) | ⭐⭐⭐ | +mem0 +chroma | **Server-side LLM auto-extracts** facts every turn; persists to disk by default |
+| 04 | [`04_zep`](04_zep/) | [4.6k](https://github.com/getzep/zep) | ⭐⭐⭐⭐ | +Zep server | Knowledge graph + temporal facts (`valid_from` / `valid_to`) + auto session summary |
+| 05 | [`05_letta`](05_letta/) | [23k](https://github.com/letta-ai/letta) | ⭐⭐⭐⭐⭐ | +Letta server | **Full agent runtime** (NOT a LangGraph plug-in!) — three-tier memory: core / recall / archival |
+
+> Star counts as of 2026-05. Note **mem0 has the most stars by far** — but that's not the same as "most appropriate for your case"; see [REPORT § 8](REPORT.md#8-选型决策框架) for selection criteria.
 
 ### Capability ladder
 

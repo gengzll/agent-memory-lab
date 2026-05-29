@@ -89,15 +89,24 @@ if section == SECTIONS[0]:
     )
 
     st.markdown("---")
+    st.info(
+        "📌 **项目范围声明** —— 本 lab 仅聚焦 **memory** 维度的方案对比。"
+        "Agent 框架本身(LangGraph / Letta / CrewAI / AutoGen / LlamaIndex)是另一个独立选型问题,"
+        "**不在此展开**。我们假定 LangGraph 是主框架,memory 后端从 5 家里选。"
+        "**唯一例外**:Letta(demo 05)本身平行替代 LangGraph,纳入是因为它的三层 memory 架构是绕不开的设计思想。"
+    )
+
+    st.markdown("---")
     st.header("5 个 Demo —— 复杂度阶梯")
     ladder_df = pd.DataFrame([
-        ["01", "langgraph_native",  "⭐",       "无",                  "Hand-rolled save/search tools; LangGraph 一等公民"],
-        ["02", "langmem",           "⭐⭐",     "+langmem",            "工厂封装 60 行 → 2 行;LLM 标准化写入"],
-        ["03", "mem0",              "⭐⭐⭐",   "+mem0 +chroma",       "服务端 LLM 自动抽事实;chroma 默认落盘"],
-        ["04", "zep",               "⭐⭐⭐⭐", "+Zep server",          "知识图谱 + 时序事实(valid_from/to) + 自动 summary"],
-        ["05", "letta",             "⭐⭐⭐⭐⭐", "+Letta server",       "完整 agent runtime(NOT LangGraph plug-in!)三层 memory"],
-    ], columns=["#", "Demo", "复杂度", "外部依赖", "核心特性"])
+        ["01", "langgraph_native", "33.3k (整框架)", "⭐",        "无",                  "Hand-rolled save/search tools; LangGraph 一等公民"],
+        ["02", "langmem",          "1.5k",           "⭐⭐",      "+langmem",            "工厂封装 60 行 → 2 行;LLM 标准化写入"],
+        ["03", "mem0",             "57k ⭐最高",     "⭐⭐⭐",     "+mem0 +chroma",       "服务端 LLM 自动抽事实;chroma 默认落盘"],
+        ["04", "zep",              "4.6k",           "⭐⭐⭐⭐",   "+Zep server",         "知识图谱 + 时序事实(valid_from/to) + 自动 summary"],
+        ["05", "letta",            "23k",            "⭐⭐⭐⭐⭐", "+Letta server",       "完整 agent runtime(NOT LangGraph plug-in!)三层 memory"],
+    ], columns=["#", "Demo", "GitHub ⭐ (2026-05)", "复杂度", "外部依赖", "核心特性"])
     st.dataframe(ladder_df, use_container_width=True, hide_index=True)
+    st.caption("📌 注意:**star 高 ≠ 适合你**。Mem0 star 最高,但适用性取决于你是否需要服务端自动抽取。详见 Section 7「选型决策框架」。")
 
     st.code(dedent("""
          01 langgraph_native        — short-term + long-term + semantic + LLM-managed
@@ -616,6 +625,7 @@ elif section == SECTIONS[4]:
     st.markdown("---")
     st.header("5 家全景对比")
     big_df = pd.DataFrame([
+        ["GitHub Stars (2026-05)", "33.3k (整框架)",                "1.5k",                              "57k ⭐ 最高",                  "4.6k",                          "23k"],
         ["类型",                "Memory Service",                  "Memory Service",                   "Memory Service",            "Memory Service",                "Agent Runtime"],
         ["一句话",              "LangGraph 自带 KV+向量 store,你自己写 tool", "工厂封装 LangGraph store",       "服务端 LLM 自动抽事实",     "知识图谱 + 时序事实",            "LLM as OS,自己管 memory"],
         ["抽取由谁做",          "LLM 自己用 tool",                  "LLM 自己用 tool(内部加 LLM 标准化)",  "服务端 LLM 自动",            "服务端(facts+graph+summary)",  "LLM 自己用内置 tool"],
