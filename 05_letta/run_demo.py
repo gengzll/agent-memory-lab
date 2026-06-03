@@ -9,15 +9,23 @@ Letta demo —— 完整 agent runtime,不是 LangGraph plug-in
              (Letta 没有"跨 thread"概念 —— agent_id 持续,自动续聊)
   Session 3: 不同 user_name → 新 agent_id,完全隔离
 
-前置:
-  # 终端 1
-  letta server
-  # 终端 2(或同一窗口设环境变量)
-  export OPENAI_API_KEY=sk-...                # Letta server 用这个 key 调 LLM
-  # 或 ZhipuAI(走 OpenAI 兼容):
-  export OPENAI_API_KEY=<zhipu-key>
-  export OPENAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4/
-  python run_demo.py
+前置 —— ⚠️ Vendor status (as of 2026-05):
+  Letta 官方主文档以 Letta Cloud 为主推荐(本地 server 仍可用但不强调)。
+
+  ✅ 推荐:Letta Cloud
+    export LETTA_API_TOKEN=<your-token>
+    export LETTA_BASE_URL=https://api.letta.com
+    python run_demo.py
+
+  ⚠ 可选:本地 server(以 docs.letta.com 为准)
+    # 终端 1
+    letta server
+    # 终端 2
+    export OPENAI_API_KEY=sk-...
+    # 或 ZhipuAI(走 OpenAI 兼容):
+    export OPENAI_API_KEY=<zhipu-key>
+    export OPENAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4/
+    python run_demo.py
 """
 
 from __future__ import annotations
@@ -72,8 +80,10 @@ def main() -> None:
         client.agents.list(limit=1)
     except (ApiError, ConnectionError) as e:
         raise RuntimeError(
-            "无法连接到 Letta server。请先在另一个终端启动:\n"
-            "    letta server\n"
+            "无法连接到 Letta server。\n"
+            "  ✅ 推荐:用 Letta Cloud → export LETTA_API_TOKEN=... + "
+            "LETTA_BASE_URL=https://api.letta.com\n"
+            "  ⚠ 或本地:在另一个终端跑 `letta server`(以 docs.letta.com 为准)\n"
             f"详情: {e}"
         ) from e
 

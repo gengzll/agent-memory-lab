@@ -11,16 +11,22 @@ Memory 模块 (Letta 版)
        * archival memory   — 无限大事实库,LLM 可用 archival_memory_insert/search 调
    - "自主读写" 是 Letta 的核心 — LLM 直接调内置的 core_memory_* / archival_memory_* 工具
 
-前置:
-  1. pip install letta letta-client
-  2. 启动 Letta server:
-       letta server                              # 默认 http://localhost:8283
-       或 docker run -p 8283:8283 letta/letta:latest
-  3. server 配置 LLM provider(默认 OpenAI,可配 ZhipuAI / Anthropic / 本地模型):
-       export OPENAI_API_KEY=sk-...
-       # 或 ZhipuAI:用 OpenAI-compatible
-       export OPENAI_API_KEY=<zhipu-key>
-       export OPENAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4/
+前置 —— ⚠️ Vendor status (as of 2026-05):
+  Letta 官方主文档以 Letta Cloud(https://app.letta.com)为主推荐。
+  本地 server 命令 (`letta server`) 在 pip 包里仍提供,但官方主文档已不强调。
+
+  ✅ 推荐路径 A:Letta Cloud(零本地资源,本 demo 改 env 即可用)
+       export LETTA_API_TOKEN=<your-token>     # https://app.letta.com/api-keys
+       export LETTA_BASE_URL=https://api.letta.com
+
+  ⚠ 可选路径 B:本地 server(以 docs.letta.com 为准,这里仅供参考)
+       1. pip install letta letta-client
+       2. letta server                          # 默认 http://localhost:8283
+       3. server 配置 LLM provider:
+            export OPENAI_API_KEY=sk-...
+            # 或 ZhipuAI 兼容:
+            export OPENAI_API_KEY=<zhipu-key>
+            export OPENAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4/
 """
 
 from __future__ import annotations

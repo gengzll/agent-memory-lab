@@ -401,18 +401,28 @@ elif section == SECTIONS[2]:
         st.dataframe(zep_caps, use_container_width=True, hide_index=True)
 
         st.subheader("启动 Zep 服务")
+        st.error(
+            "⚠️ **Vendor status (2026-05)**:Zep Community Edition(self-host docker)**已被官方废弃** —— "
+            "见 https://github.com/getzep/zep 的 README。"
+        )
         st.code(dedent('''
-            # 本地起 Zep
-            docker run -p 8000:8000 ghcr.io/getzep/zep:latest
-            export ZEP_BASE_URL=http://localhost:8000
+            # ✅ 推荐路径 A: Zep Cloud(无 Docker,本 demo 现有代码直接可用)
+            # 注册 + 拿 key: https://www.getzep.com  →  app.getzep.com/api-keys
+            export ZEP_API_KEY=<your-zep-cloud-key>
 
-            # 或 Zep Cloud
-            export ZEP_API_KEY=...
+            # ✅ 推荐路径 B: Graphiti(Zep 的图谱引擎独立开源,可 self-host)
+            # 仓库: https://github.com/getzep/graphiti
+            git clone https://github.com/getzep/graphiti && cd graphiti
+            docker compose up        # 起 Neo4j + Graphiti server
+            pip install graphiti-core
+            # ⚠️ Graphiti API 与 Zep client 不同,demo 04 代码要重写
+
+            # ✗ 已废弃,不推荐:
+            # docker run -p 8000:8000 ghcr.io/getzep/zep:latest
         ''').strip(), language="bash")
 
-        st.warning(
-            "**部署门槛最高**:本地需 Docker + Neo4j + Postgres + Zep server。"
-            "检索能力最强(三种 search_scope:messages / facts / graph),但完全黑盒,自定义能力受限。"
+        st.info(
+            "**检索能力最强**(三种 search_scope:messages / facts / graph),但完全黑盒,自定义能力受限。"
         )
 
     # ------------------- 05 -------------------
@@ -474,14 +484,21 @@ elif section == SECTIONS[2]:
         """).strip(), language="text")
 
         st.subheader("启动 Letta 服务")
+        st.warning(
+            "⚠️ **Vendor status (2026-05)**:Letta 官方主文档以 **Letta Cloud** 为主推荐;"
+            "GitHub README 和 docs 主目录已不强调本地 server 命令(虽然 pip 包仍提供)。"
+        )
         st.code(dedent('''
-            pip install letta letta-client
-            letta server                          # 默认 http://localhost:8283
-            export OPENAI_API_KEY=sk-...
+            # ✅ 推荐路径 A: Letta Cloud(零本地资源)
+            # 注册 + token: https://app.letta.com/api-keys
+            export LETTA_API_TOKEN=<your-token>
+            export LETTA_BASE_URL=https://api.letta.com
+            # demo 05 的 build_client 已支持自动读这两个 env
 
-            # 或 ZhipuAI:走 OpenAI 兼容
-            export OPENAI_API_KEY=<zhipu-key>
-            export OPENAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4/
+            # ⚠ 可选路径 B: 本地 server(pip 装,但官方主文档不强调,启动参数以官方为准)
+            pip install letta letta-client
+            letta server                          # 默认 8283 — 仅供参考
+            export OPENAI_API_KEY=sk-...          # Letta server 端 LLM key
         ''').strip(), language="bash")
 
         st.error(
@@ -626,6 +643,7 @@ elif section == SECTIONS[4]:
     st.header("5 家全景对比")
     big_df = pd.DataFrame([
         ["GitHub Stars (2026-05)", "33.3k (整框架)",                "1.5k",                              "57k ⭐ 最高",                  "4.6k",                          "23k"],
+        ["Vendor Status (2026-05)", "主流活跃",                     "LangChain 子项目活跃",                "主流活跃",                   "⚠️ CE 废弃,只推 Cloud(可换 Graphiti)", "⚠️ 主推 Cloud,本地 server 不强调"],
         ["类型",                "Memory Service",                  "Memory Service",                   "Memory Service",            "Memory Service",                "Agent Runtime"],
         ["一句话",              "LangGraph 自带 KV+向量 store,你自己写 tool", "工厂封装 LangGraph store",       "服务端 LLM 自动抽事实",     "知识图谱 + 时序事实",            "LLM as OS,自己管 memory"],
         ["抽取由谁做",          "LLM 自己用 tool",                  "LLM 自己用 tool(内部加 LLM 标准化)",  "服务端 LLM 自动",            "服务端(facts+graph+summary)",  "LLM 自己用内置 tool"],

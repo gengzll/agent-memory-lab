@@ -3,9 +3,10 @@ Memory 模块 (Zep 版)
 
 与 01/02/03 的核心差异:
   - Zep 是独立服务,demo 跑之前必须先起后端:
-    * Zep Cloud:    export ZEP_API_KEY=...
-    * Self-hosted:  docker run -p 8000:8000 ghcr.io/getzep/zep:latest
-                    export ZEP_BASE_URL=http://localhost:8000
+    * Zep Cloud(推荐):  export ZEP_API_KEY=...
+    * Self-hosted(⚠️ Zep CE 已废弃 as of 2026-05):
+        历史命令(EOL,不推荐): docker run -p 8000:8000 ghcr.io/getzep/zep:latest
+        替代方案: 用 Graphiti (https://github.com/getzep/graphiti),但 API 不同,demo 04 代码需重写
   - 数据模型:  User → Session → Message,zep 强制三层结构
   - 自动能力: 服务端自动抽取事实(facts)+ 实体关系图(knowledge graph)+ 会话摘要(summary)
               比 mem0 更"重",但召回质量(尤其是跨 session 事实)更稳
@@ -50,8 +51,9 @@ def build_zep_client():
     base_url = os.getenv("ZEP_BASE_URL")
     if not api_key and not base_url:
         raise RuntimeError(
-            "请设置 ZEP_API_KEY (Zep Cloud) 或 ZEP_BASE_URL (self-hosted)。\n"
-            "  本地起服务: docker run -p 8000:8000 ghcr.io/getzep/zep:latest"
+            "请设置 ZEP_API_KEY (Zep Cloud,推荐) 或 ZEP_BASE_URL (self-hosted)。\n"
+            "  ⚠️ Zep CE 已废弃 (as of 2026-05),推荐用 Zep Cloud。\n"
+            "  如要 self-host 图谱能力,改用 Graphiti: https://github.com/getzep/graphiti"
         )
     kwargs = {}
     if api_key:

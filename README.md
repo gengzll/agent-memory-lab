@@ -80,9 +80,11 @@ python "02_langmem/run_demo.py"            # ⭐⭐ langmem factory tools
 python "03_mem0/run_demo.py"               # ⭐⭐⭐ Mem0 self-host (auto chroma persist)
 ```
 
-For 04 (Zep) and 05 (Letta), see their own files — both need an external service running. Quick links:
-- Zep self-host: `docker run -p 8000:8000 ghcr.io/getzep/zep:latest`
-- Letta self-host: `pip install letta && letta server`
+For 04 (Zep) and 05 (Letta), see their own files — both need an external service.
+
+> ⚠️ **Vendor status (as of 2026-05)** — recommendations have shifted to Cloud:
+> - **Zep**: Community Edition self-host docker is **deprecated** (per official GitHub README). Use **Zep Cloud** (`export ZEP_API_KEY=...`, existing demo code works as-is), or use the open-source **[Graphiti](https://github.com/getzep/graphiti)** for self-hosted graph memory (but demo 04 code would need rewriting since Graphiti's API differs from Zep client).
+> - **Letta**: official docs guide users to **Letta Cloud** (`export LETTA_API_TOKEN=...`). Local `letta server` from the pip package may still work but is no longer featured in the main docs — verify with [docs.letta.com](https://docs.letta.com) before relying on it.
 
 ### 4. Interactive report (Streamlit)
 

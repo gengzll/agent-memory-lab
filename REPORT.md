@@ -246,17 +246,16 @@ def search_memory(query: str, *, config: RunnableConfig):
 - **session summary**:自动生成对话摘要,减少 context 长度
 
 **特点**:
-- ❌ 部署门槛最高:本地需 Docker + Neo4j + Postgres + Zep server
 - ✅ 检索能力最强(三种 search_scope:messages / facts / graph)
 - ⚠️ 完全黑盒,自定义能力受限
 - 💡 我们这版**未跑通**(需起服务),代码作为示范
 
-启动 Zep 服务:
-```bash
-docker run -p 8000:8000 ghcr.io/getzep/zep:latest
-export ZEP_BASE_URL=http://localhost:8000
-# 或 Zep Cloud:export ZEP_API_KEY=...
-```
+> ⚠️ **Vendor status (as of 2026-05)**:Zep **Community Edition(self-host docker)已被官方废弃** —— 见 https://github.com/getzep/zep 的 README:"Zep Community Edition is no longer supported and has been deprecated"。
+>
+> **当前推荐部署路径**:
+> - **Zep Cloud(推荐)**:无 Docker,本 demo 现有代码直接可用。注册并申请 key:https://www.getzep.com → `export ZEP_API_KEY=...`
+> - **Graphiti self-host(开源替代)**:Zep 把图谱引擎独立开源,可本地 docker compose 跑 Neo4j。仓库:https://github.com/getzep/graphiti。**但 API 与 Zep client 不同**(`graphiti.add_episode` vs `client.memory.add`),要让本 demo 代码跑起来需重写 `memory_module.py`
+> - ~~`docker run ghcr.io/getzep/zep:latest`~~ — 历史命令,EOL,不推荐
 
 ---
 
@@ -323,15 +322,13 @@ response = client.agents.messages.create(
 - ✅ 唯一支持 "agent 自演化人格" 的方案 — agent 有持久化身份,memory 跟 agent 绑定
 - ✅ Context 管理最精细:LLM 自己决定什么 page in,什么放 archival
 - ⚠️ Token 成本高(core memory 永驻 context)
-- ⚠️ 部署:`pip install letta && letta server`(本地)或 Letta Cloud
 - 💡 我们这版**未跑通**,代码作为示范
 
-启动 Letta 服务:
-```bash
-pip install letta letta-client
-letta server   # 默认 http://localhost:8283
-export OPENAI_API_KEY=sk-...
-```
+> ⚠️ **Vendor status (as of 2026-05)**:Letta 官方主文档以 **Letta Cloud**(https://app.letta.com)为主推荐;GitHub README 和 docs 主目录已不强调本地 server 命令。
+>
+> **当前推荐部署路径**:
+> - **Letta Cloud(推荐)**:零本地资源。注册拿 token:https://app.letta.com/api-keys → `export LETTA_API_TOKEN=...` + `export LETTA_BASE_URL=https://api.letta.com`。本 demo 现有代码改这两个 env 即可
+> - **本地 server**:`pip install letta && letta server`(默认端口 8283)— pip 包仍提供,但具体启动参数和环境变量**以 https://docs.letta.com 为准**(主文档已不强调,可能在 0.x 版本间有变化)
 
 ---
 
@@ -493,6 +490,7 @@ def chat(agent, store, text, thread_id, user_id):
 | 维度 | LangGraph 原生 | langmem | Mem0 | Zep | Letta (MemGPT) |
 |---|---|---|---|---|---|
 | **GitHub Stars** (2026-05) | [33.3k](https://github.com/langchain-ai/langgraph) (整个框架) | [1.5k](https://github.com/langchain-ai/langmem) | [**57k**](https://github.com/mem0ai/mem0) ⭐最高 | [4.6k](https://github.com/getzep/zep) | [23k](https://github.com/letta-ai/letta) |
+| **Vendor Status** (2026-05) | 主流活跃 | LangChain 子项目活跃 | 主流活跃 | ⚠️ **CE 废弃,只推 Cloud**(或用 Graphiti) | ⚠️ 主推 Cloud,本地 server 不强调 |
 | **类型** | Memory Service | Memory Service | Memory Service | Memory Service | **Agent Runtime** |
 | **一句话** | 自带 KV+向量 store,你自己写 tool | 工厂封装 LangGraph store | 服务端 LLM 自动抽事实 | 知识图谱 + 时序事实 | LLM as OS,自己管 memory |
 | **抽取由谁做** | LLM 自己用 tool | LLM 自己用 tool(langmem 内部加 LLM 标准化) | 服务端 LLM 每轮自动 | 服务端(facts+graph+summary) | LLM 自己用内置 tool |
@@ -591,9 +589,9 @@ def chat(agent, store, text, thread_id, user_id):
 | 内部工具 / demo | 01 全内存 | 0 依赖 |
 | 通用 chatbot(中等流量) | 03 Mem0 + chroma 落盘 | 自动抽取,持久化开箱即用 |
 | 通用 chatbot(高流量,生产) | 01 + PostgresStore + Redis checkpointer | 性能/成本/可控性 |
-| 客服系统 | 04 Zep | 时序事实 + 图谱必须 |
-| 销售 CRM | 04 Zep | 同上 |
-| 心理咨询 / 长期陪伴 | 05 Letta 或 04 Zep | persona 演化 / 时序追溯 |
+| 客服系统 | 04 Zep **Cloud**(CE 已废弃)或 Graphiti self-host | 时序事实 + 图谱必须 |
+| 销售 CRM | 04 Zep Cloud 或 Graphiti | 同上 |
+| 心理咨询 / 长期陪伴 | 05 Letta **Cloud** 或 04 Zep Cloud | persona 演化 / 时序追溯 |
 | 企业内合规(金融、医疗) | 01 + 自研后端 + 审计日志 | 数据自控,不能用 SaaS |
 | 出海 SaaS | Mem0 Cloud / Zep Cloud | 省运维,合规靠厂商 |
 

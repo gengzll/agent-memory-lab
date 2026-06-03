@@ -5,20 +5,18 @@
 额外:每个 session 启动前要 ensure_user / ensure_session。
 
 前置:
-    # 1. Zep 服务(二选一)
-    export ZEP_API_KEY=...                           # Zep Cloud
-    # 或:
-    docker run -p 8000:8000 ghcr.io/getzep/zep:latest
-    export ZEP_BASE_URL=http://localhost:8000        # self-hosted
+    # 1. Zep 服务 —— ⚠️ Vendor status (as of 2026-05):
+    #    Zep CE (self-host docker) 已被官方废弃。推荐用 Zep Cloud:
+    export ZEP_API_KEY=<your-zep-cloud-key>          # https://app.getzep.com/api-keys
+    #
+    #    如必须 self-host 图谱能力,改用 Graphiti(API 与 Zep client 不同,
+    #    本 demo 代码需重写):https://github.com/getzep/graphiti
 
     # 2. 本 demo client 端 LLM(跟 01/02/03 一致,走智谱)
     export ZHIPUAI_API_KEY=...
 
     ⚠️ 注意:Zep server **自己也要 LLM** 做事实抽取/图谱构建,
-    它读自己的环境变量(通常 OPENAI_API_KEY)。如果你 self-host Zep
-    并希望服务端也用智谱,得按 zep 文档配 ZhipuAI provider;否则
-    Zep 默认尝试 OpenAI,事实抽取会静默失败。
-    详见:https://help.getzep.com/llms
+    Zep Cloud 已自带 LLM(无需额外配),self-host(如 Graphiti)需自己配 LLM key。
 """
 
 from __future__ import annotations

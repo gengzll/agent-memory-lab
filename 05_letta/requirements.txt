@@ -1,6 +1,8 @@
 letta-client>=0.1.0
-# Letta server 单独装(client/server 分离):
+# ⚠️ Vendor status (as of 2026-05):
+#   Letta 官方主推 Cloud(https://app.letta.com)。
+#   仅装 letta-client 即可走 Cloud:export LETTA_API_TOKEN=... + LETTA_BASE_URL=https://api.letta.com
+#
+# 如必须本地 server,以 docs.letta.com 为准。历史命令(可能过时):
 #   pip install letta
-#   letta server                              # 在 8283 端口启 server
-# 或 Docker:
-#   docker run -p 8283:8283 letta/letta:latest
+#   letta server                              # 默认 8283 端口

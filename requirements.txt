@@ -28,5 +28,6 @@ pandas>=2.0
 # langgraph-store-postgres          # production PostgresStore + pgvector
 
 # ----- Demos 04 / 05 (external services, see their own requirements.txt) -----
-# zep-cloud>=2.0    # demo 04 — also: docker run -p 8000:8000 ghcr.io/getzep/zep:latest
-# letta-client      # demo 05 — also: pip install letta && letta server
+# ⚠️ Vendor status (as of 2026-05) shifted to Cloud — see REPORT § 3.4 / § 3.5:
+# zep-cloud>=2.0    # demo 04 — Zep Cloud recommended (CE self-host deprecated; alternatively use Graphiti)
+# letta-client      # demo 05 — Letta Cloud recommended (local server still possible, see docs.letta.com)
