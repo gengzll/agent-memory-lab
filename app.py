@@ -1085,12 +1085,13 @@ elif section == SECTIONS[8]:
                     from langchain_core.messages import HumanMessage
 
                     _agent.SYSTEM_PROMPT = PROMPT_VARIANTS[variant]
-                    a, _ = _agent.build_agent()
+                    a, store = _agent.build_agent()
+                    user_id = "streamlit_user"
                     result = a.invoke(
                         {"messages": [HumanMessage(content=user_input)]},
                         config={"configurable": {
                             "thread_id": f"streamlit_{variant[:2]}",
-                            "user_id": "streamlit_user",
+                            "user_id": user_id,
                         }},
                     )
 
@@ -1099,21 +1100,50 @@ elif section == SECTIONS[8]:
                               if getattr(m, "type", None) == "tool"]
                 save_calls = [tc for tc in tool_calls if tc.name == "save_memory"]
 
-                col_x, col_y = st.columns(2)
+                # 直接从 store 拿真正落地的 memory(verify 调用 = 存)
+                try:
+                    stored = store.search(("memories", user_id), query="", limit=20)
+                except Exception:
+                    try:
+                        stored = store.search(("memories", user_id), limit=20)
+                    except Exception:
+                        stored = []
+
+                col_x, col_y, col_z = st.columns(3)
                 col_x.metric("Tool 总调用", len(tool_calls))
                 col_y.metric(
                     "save_memory 调用",
                     len(save_calls),
                     "✓ 命中" if save_calls else "✗ 漏调",
                 )
+                col_z.metric(
+                    "Store 实际落地条数",
+                    len(stored),
+                    "✓ 已存" if stored else "✗ 空",
+                )
 
                 st.subheader("Bot 回复")
                 st.write(reply)
 
+                st.subheader("Store 实际落地的记忆")
+                st.caption(
+                    "⚠️ 每次按按钮都会新建一个 `InMemoryStore`,所以这是**本次唯一的**记忆,"
+                    "不会跨按钮累积。要测跨 session 召回请直接跑 `python 01_langgraph_native/run_demo.py`。"
+                )
+                if stored:
+                    for it in stored:
+                        category = it.value.get("category", "?")
+                        content = it.value.get("content", str(it.value))
+                        st.markdown(f"- **[{category}]** {content}")
+                else:
+                    st.info(
+                        "Store 是空的 —— LLM 没调 `save_memory`,所以没有任何记忆真的写进去。"
+                    )
+
                 if tool_calls:
-                    st.subheader("Tool 调用轨迹")
-                    for tc in tool_calls:
-                        st.code(f"[{tc.name}] {str(tc.content)[:200]}", language="text")
+                    with st.expander("Tool 调用轨迹(展开查看)"):
+                        for tc in tool_calls:
+                            st.code(f"[{tc.name}] {str(tc.content)[:200]}", language="text")
                 else:
                     st.warning(
                         "⚠️ **没有任何 tool 调用** —— LLM 选择直接回复,"
