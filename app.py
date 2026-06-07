@@ -976,75 +976,24 @@ elif section == SECTIONS[8]:
 
     st.markdown("---")
 
+    # 直接 import 实验脚本的 V0-V3,保证 Streamlit 行为 = N=5 实验数据所基于的同一份 prompt
+    from pathlib import Path as _Path
+    _repo_root = _Path(__file__).resolve().parent
+    for _p in (str(_repo_root), str(_repo_root / "01_langgraph_native"), str(_repo_root / "experiments")):
+        if _p not in sys.path:
+            sys.path.insert(0, _p)
+    import prompt_variants as _pv  # noqa: E402
+
     PROMPT_VARIANTS = {
-        "V0 baseline (温和引导)": dedent("""
-            你是一个有长期记忆的对话助手。
-
-            记忆使用规则:
-            1. 当用户透露偏好/事实/约定时,主动调用 save_memory 工具记下,并简短确认"已记住"。
-            2. 回答前如果不确定用户背景,先调用 search_memory 检索一次。
-        """).strip(),
-
-        "V1 strict (硬性规则)": dedent("""
-            你是一个有长期记忆的对话助手。
-
-            【硬性记忆规则 - 必须遵守】
-
-            第一步:检查用户消息是否包含:
-              (a) 自我介绍 - 姓名/身份/职业
-              (b) 偏好声明 - "我喜欢/希望/以后都用"
-              (c) 事实陈述 - "我在/我们用/我的项目"
-              (d) 明确请求 - "请记住/记一下"
-
-            第二步:命中则**先调用 save_memory**,再生成回复
-              - content: 用第三人称转述(例:"用户的名字是 Alice")
-              - category: preference / fact / rule / decision
-
-            【失败模式 - 必须避免】
-            × 嘴上说"已记住"但没调 save_memory
-            × 因为用户的请求里有"帮我写代码"就跳过 memory 记录
-        """).strip(),
-
-        "V2 few-shot (示例引导)": dedent("""
-            你是一个有长期记忆的对话助手。
-
-            【记忆规则】用户透露偏好/事实/身份时,**先调用 save_memory,再回复**。
-
-            【示例】
-            输入: "我叫 Alice"
-              1. tool_call: save_memory(content="用户的名字是 Alice", category="fact")
-              2. 回复: "你好,Alice!"
-
-            输入: "我喜欢简洁回答,顺便告诉我今天天气"
-              1. tool_call: save_memory(content="用户喜欢简洁回答", category="preference")
-              2. 回复: "好的,会简洁回答。关于天气,你能告诉我所在城市吗?"
-
-            输入: "帮我写个函数"
-              (无需调用 memory tool,直接回复代码)
-        """).strip(),
-
-        "V3 + 自检 (承诺词反向校验)": dedent("""
-            你是一个有长期记忆的对话助手。
-
-            【记忆规则】用户透露偏好/事实/身份时,**先调用 save_memory,再回复**。
-
-            【示例】
-            输入: "我叫 Alice"
-              1. tool_call: save_memory(content="用户的名字是 Alice", category="fact")
-              2. 回复: "你好,Alice!"
-
-            输入: "帮我写个函数"
-              (无需调用 memory tool,直接回复代码)
-
-            【最后自检 - 关键!!】
-            在生成最终回复前,自检一次:
-              问: 我的回复里有没有"记住了" / "已记住" / "记下了" / "OK 没问题" 这种承诺词?
-              问: 如果有,我之前调用过 save_memory tool 吗?
-
-            如果答案是"有承诺词但没调过 tool" —— 这是严重的"假装记忆"错误。
-            请回退,先调用 save_memory 让事实真正落到 store,再生成回复。
-        """).strip(),
+        "V0 baseline (温和引导)": _pv.V0,
+        "V1 strict (硬性规则)": _pv.V1,
+        "V2 few-shot (示例引导)": _pv.V2,
+        "V3 + 自检 (承诺词反向校验)": _pv.V3,
     }
+    st.caption(
+        "✅ Prompt 文本与 `experiments/prompt_variants.py` 实时同步 —— "
+        "即跟 §5.2 那张 N=5 数据表里测试用的完全是同一份 prompt。"
+    )
 
     col1, col2 = st.columns([1, 2])
     with col1:
@@ -1149,6 +1098,33 @@ elif section == SECTIONS[8]:
                         "⚠️ **没有任何 tool 调用** —— LLM 选择直接回复,"
                         "没有把信息真的写入 memory。"
                     )
+
+                # 诊断卡片 —— "为什么 0 调用" 时这里直接告诉你实际跑的是什么
+                with st.expander("🔍 诊断信息 — 实际跑的 provider / prompt / 消息流"):
+                    st.write("**LLM Provider 配置(实际生效)**")
+                    st.code(
+                        f"OPENAI_MODEL       = {os.getenv('OPENAI_MODEL', '(unset → glm-4-flash)')}\n"
+                        f"OPENAI_BASE_URL    = {os.getenv('OPENAI_BASE_URL', '(unset → 智谱)')}\n"
+                        f"OPENAI_EMBEDDING_MODEL = {os.getenv('OPENAI_EMBEDDING_MODEL', '(unset → embedding-2)')}\n"
+                        f"OPENAI_API_KEY     = {'***' + os.getenv('OPENAI_API_KEY','')[-4:] if os.getenv('OPENAI_API_KEY') else '(未设)'}",
+                        language="text",
+                    )
+                    st.caption(
+                        "如果上面 model/base_url 不是你预期的,说明 expander 里改的 env 没被本次按钮接受 —— "
+                        "需要先点保存 / 改完后再点'运行'。"
+                    )
+                    st.write(f"**模块级 SYSTEM_PROMPT(patch 是否生效)— 长度 {len(_agent.SYSTEM_PROMPT)}**")
+                    st.code(
+                        _agent.SYSTEM_PROMPT[:500] + ("\n...(已截断)" if len(_agent.SYSTEM_PROMPT) > 500 else ""),
+                        language="text",
+                    )
+                    st.write("**消息流(从 HumanMessage 到 final AIMessage)**")
+                    for i, m in enumerate(result["messages"]):
+                        msg_type = getattr(m, "type", type(m).__name__)
+                        tcs = getattr(m, "tool_calls", None) or []
+                        suffix = f"  ← tool_calls: {[tc.get('name') for tc in tcs]}" if tcs else ""
+                        body = str(getattr(m, "content", ""))[:200]
+                        st.code(f"[{i}] {msg_type}{suffix}\n    {body}", language="text")
 
             except Exception as e:
                 st.exception(e)
