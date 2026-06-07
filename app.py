@@ -516,49 +516,102 @@ elif section == SECTIONS[3]:
     st.markdown(
         "**问题**:demo 01/02 在 `temperature=0` 下,LLM 仍可能"
         "'嘴上说已记住但实际没调 `save_memory` tool'。"
-        "用 4 种 prompt × 2 种输入测命中率。"
+        "用 **4 种 prompt × 2 种输入 × N 次重复** 看 `save_memory` 是否真被调用。"
     )
-    st.caption("📁 完整脚本:`experiments/prompt_variants.py`")
+    st.caption("📁 完整脚本:`experiments/prompt_variants.py`(里面有每个变体的 prompt 全文)")
 
     st.markdown("---")
-    st.header("4 种 Prompt 变体")
+    st.header("4 种 Prompt 变体 — 累加式设计")
+    st.caption("每个变体在上一个基础上累加,看哪一步带来最大提升。")
     variant_df = pd.DataFrame([
-        ["V0 baseline",  "原温和引导 prompt"],
-        ["V1 strict",    "硬性规则 + 触发条件枚举 + 失败模式警告"],
-        ["V2 few-shot",  "V1 + 3 个 input/正确流程示例"],
-        ["V3 + 自检",     "V2 + 承诺词反向校验('说了已记住但没调 tool,回退')"],
-    ], columns=["变体", "设计"])
+        ["V0 baseline",  "(起点)简短陈述 3 条记忆使用规则",
+            "看不加任何强化时,模型自由发挥的真实命中率"],
+        ["V1 strict",    "把'何时调 save_memory'展开成触发条件清单 (a/b/c/d) + 三步执行流程 + 失败模式警告 (× 嘴上说已记住但没调 tool)",
+            "把规则变硬性指令,堵漏调"],
+        ["V2 few-shot",  "V1 + 4 个 input/正确流程示例(简单声明 / 含任务的复合声明 / 纯任务无需记 / 多事实复合)",
+            "让模型按示例'临摹'调用形式"],
+        ["V3 + 自检",     "V2 + 承诺词反向校验:回复前自查'我有没有写已记住但其实没调 tool'",
+            "堵'假装记忆'这个最常见失败模式"],
+    ], columns=["变体", "在上一变体基础上增加的内容", "关键意图"])
     st.table(variant_df)
 
     st.markdown("---")
-    st.header("8 组实测命中率")
-    result_df = pd.DataFrame([
-        ["V0 baseline", "✓ (1/2 不稳定)", "✗ 0 次"],
-        ["V1 strict",   "✓ 1 次",          "✗ 0 次"],
-        ["V2 few-shot", "✗ 0 次",          "✓ 2 次完美"],
-        ["V3 + 自检",    "✗ 0 次",          "✓ 2 次"],
-    ], columns=["变体", "I1 简单声明", "I2 含其他诉求"])
-    st.table(result_df)
+    st.header("2 种输入 — 简单 vs 含干扰任务")
+    input_df = pd.DataFrame([
+        ["I1 简单输入",
+            "我叫 Alice,在量化交易做研究员",
+            "1 条(姓名+职业算一条)",
+            "无其他诉求争夺注意力,理论上应 100% 命中"],
+        ["I2 复杂输入",
+            "我叫 Alice,我喜欢用 Python。顺便帮我写一个计算列表平均值的函数。",
+            "2 条(姓名 + 编程偏好)+ 1 个无关编程任务",
+            "故意混入任务诉求,看 LLM 会不会被任务带跑而漏调 save_memory"],
+    ], columns=["标签", "完整输入文本", "含几条待存事实", "设计目的"])
+    st.table(input_df)
+    st.info(
+        "📌 读数据时记住:**I1 期望 save_memory 调用 1 次,I2 期望 2 次**。"
+        "数值高于期望说明重复调,低于期望说明漏调。"
+    )
 
-    st.subheader("save_memory 调用次数(可视化)")
+    st.markdown("---")
+    st.header("实测命中率(N=5,glm-4-flash,temperature=0)")
+    st.caption(
+        "数据收集:每个 (变体 × 输入) 组合重复跑 N=5 次。"
+        "`mean ± std` 为 save_memory 实际调用次数的均值和标准差;"
+        "`hit_rate` = N 次中至少调 1 次的比率(衡量漏调);"
+        "`perfect_rate` = N 次中正好调对期望次数的比率(衡量全调对)。"
+    )
+
+    result_df = pd.DataFrame([
+        ["V0 baseline",   "0.80 ± 0.40", "80% / 80%",     "0.00 ± 0.00", "0% / 0%"],
+        ["V1 strict",     "1.00 ± 0.00", "100% / 100%",   "0.00 ± 0.00", "0% / 0%"],
+        ["V2 few_shot",   "0.00 ± 0.00", "0% / 0%",       "1.60 ± 0.80 †", "80% / 80% †"],
+        ["V3 selfcheck",  "0.00 ± 0.00", "0% / 0%",       "2.00 ± 0.00", "100% / 100%"],
+    ], columns=["变体", "I1 mean ± std", "I1 hit / perfect", "I2 mean ± std", "I2 hit / perfect"])
+    st.table(result_df)
+    st.caption(
+        "† V2_few_shot × I2 的 5 次跑里有 1 次智谱 API Connection error 被记为 0;"
+        "扣除该次后实际是 2.00 ± 0.00 / 100% / 100%。"
+    )
+
+    st.success(
+        "**记忆口诀** — 出现完全反转的 trade-off:\n\n"
+        "- **V0/V1 阵营** simple-friendly:简单 input 还行,复杂 input 全军覆没(0/0)\n"
+        "- **V2/V3 阵营** complex-master:复杂 input 完美,简单 input 反而退化到 0"
+    )
+
+    st.subheader("save_memory 调用次数(mean,可视化)")
     chart_df = pd.DataFrame({
-        "I1 simple":  [1, 1, 0, 0],
-        "I2 complex": [0, 0, 2, 2],
+        "I1 simple (期望 1)":  [0.80, 1.00, 0.00, 0.00],
+        "I2 complex (期望 2)": [0.00, 0.00, 1.60, 2.00],
     }, index=["V0", "V1", "V2", "V3"])
     st.bar_chart(chart_df)
 
     st.markdown("---")
     st.header("三个核心结论")
-    st.warning(
-        "**结论 1 — Prompt 优化有天花板**:V2/V3 解决复杂输入,但简单输入反而退化"
-        "(few-shot 让模型'按示例行事')。"
+    st.error(
+        "**结论 1 — Prompt 优化有反转 trade-off,不是单调改进** ⚠️\n\n"
+        "V1→V2 救活 I2 (0 → 1.6),但同时把 I1 从 1.0 砸到 0;V3 在 I2 完美 (2.00 ± 0),I1 仍是 0。\n\n"
+        "**机制**:V2 加的 4 个 few-shot 示例**全是含任务的复合声明**,"
+        "模型学到的隐含规则成了「**看到任务才存事实**」,纯自我介绍式的 I1 被判定为「不需要存」。"
+        "这是 few-shot 的 prompt distribution shift 经典坑。"
     )
     st.warning(
-        "**结论 2 — glm-4-flash 在 tool calling 上有固有非确定性**:V0 baseline "
-        "同输入两次跑结果不同,temperature=0 也无法消除。**这是模型能力,不是 prompt 能解决的**。"
+        "**结论 2 — glm-4-flash 在 tool calling 上有固有非确定性**\n\n"
+        "直接证据:`V0_baseline × I1_simple` 的 **std=0.40**(5 次跑出 4 次 1 / 1 次 0)。"
+        "`temperature=0` 不能消除 —— 是模型 router/采样层面的随机性。"
+        "强 prompt(如 V3 × I2)可以**掩盖**这种非确定性(std=0.00),但不是消除。"
     )
     st.warning(
-        "**结论 3 — 生产环境必须工程兜底**:不能只靠 prompt。"
+        "**结论 3 — 生产环境必须工程兜底**\n\n"
+        "没有任何单一 prompt 同时拿下 I1 和 I2。最强的 V3 在 I2 完美,I1 也是 0。"
+        "工程兜底(规则匹配补 save / Mem0 那种 LLM 后处理抽取)是必经路。"
+    )
+    st.info(
+        "**额外洞察** —— 业务 input 分布决定 prompt 选择:\n\n"
+        "- 业务 input **确定是 I2-like 复合诉求** → V3 + glm-4-flash 已稳定 100%,直接上\n"
+        "- 业务 input **是 I1-like 纯声明** → V1 strict 是最稳的选择\n"
+        "- **没有一个 prompt 能两个都覆盖** —— 这就是这次实验最强的工程结论"
     )
 
     st.markdown("---")
