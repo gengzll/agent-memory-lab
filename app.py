@@ -1009,6 +1009,11 @@ elif section == SECTIONS[8]:
         st.code(PROMPT_VARIANTS[variant], language="text")
 
     runtime_model = os.getenv("OPENAI_MODEL", "glm-4-flash")
+
+    # 跨按钮 click 计数,帮助定位 "第二次失败" 类问题
+    if "section9_click_count" not in st.session_state:
+        st.session_state.section9_click_count = 0
+
     if st.button(
         f"🚀 运行 demo 01(实际调用 {runtime_model})",
         type="primary",
@@ -1017,7 +1022,11 @@ elif section == SECTIONS[8]:
         if not (os.getenv("OPENAI_API_KEY") or os.getenv("ZHIPUAI_API_KEY")):
             st.error("请先填入 OPENAI_API_KEY(或 ZHIPUAI_API_KEY 作为 fallback)")
         else:
+            st.session_state.section9_click_count += 1
+            click_no = st.session_state.section9_click_count
+
             from pathlib import Path
+            import hashlib
             repo_root = Path(__file__).resolve().parent
             # 让 llm_factory 和 demo 01 都能被 import
             for p in (str(repo_root), str(repo_root / "01_langgraph_native")):
@@ -1027,19 +1036,28 @@ elif section == SECTIONS[8]:
             try:
                 with st.spinner(f"调用 {runtime_model},等 5-15 秒..."):
                     # 重置 module cache 防 prompt patch / env 切换不生效
-                    for mod in ("agent", "memory_module", "llm_factory"):
+                    # 包括 prompt_variants 自身和它 import 的 agent —— 保证 V0-V3 字符串
+                    # 跟模块状态都从干净状态开始
+                    for mod in ("agent", "memory_module", "llm_factory", "prompt_variants"):
                         if mod in sys.modules:
                             del sys.modules[mod]
+                    import prompt_variants as _pv_fresh  # 重新算 V0-V3
                     import agent as _agent
                     from langchain_core.messages import HumanMessage
 
-                    _agent.SYSTEM_PROMPT = PROMPT_VARIANTS[variant]
+                    chosen_prompt = {
+                        "V0 baseline (温和引导)": _pv_fresh.V0,
+                        "V1 strict (硬性规则)": _pv_fresh.V1,
+                        "V2 few-shot (示例引导)": _pv_fresh.V2,
+                        "V3 + 自检 (承诺词反向校验)": _pv_fresh.V3,
+                    }[variant]
+                    _agent.SYSTEM_PROMPT = chosen_prompt
                     a, store = _agent.build_agent()
                     user_id = "streamlit_user"
                     result = a.invoke(
                         {"messages": [HumanMessage(content=user_input)]},
                         config={"configurable": {
-                            "thread_id": f"streamlit_{variant[:2]}",
+                            "thread_id": f"streamlit_{variant[:2]}_click{click_no}",
                             "user_id": user_id,
                         }},
                     )
@@ -1048,6 +1066,14 @@ elif section == SECTIONS[8]:
                 tool_calls = [m for m in result["messages"]
                               if getattr(m, "type", None) == "tool"]
                 save_calls = [tc for tc in tool_calls if tc.name == "save_memory"]
+
+                # 本次 prompt 指纹,帮你确认每次按钮跑的是不是同一份 prompt
+                prompt_md5 = hashlib.md5(chosen_prompt.encode("utf-8")).hexdigest()[:8]
+                st.caption(
+                    f"📌 本次第 **{click_no}** 次运行 · variant=`{variant}` · "
+                    f"prompt length=`{len(chosen_prompt)}` · prompt md5=`{prompt_md5}` · "
+                    f"thread_id=`streamlit_{variant[:2]}_click{click_no}`"
+                )
 
                 # 直接从 store 拿真正落地的 memory(verify 调用 = 存)
                 try:
@@ -1099,32 +1125,69 @@ elif section == SECTIONS[8]:
                         "没有把信息真的写入 memory。"
                     )
 
-                # 诊断卡片 —— "为什么 0 调用" 时这里直接告诉你实际跑的是什么
-                with st.expander("🔍 诊断信息 — 实际跑的 provider / prompt / 消息流"):
+                # 诊断卡片 —— 0 调用时自动展开,方便定位 root cause
+                with st.expander(
+                    "🔍 诊断信息 — 实际跑的 provider / prompt / 消息流"
+                    + ("(自动展开:本次 tool 调用=0)" if not tool_calls else ""),
+                    expanded=not tool_calls,
+                ):
                     st.write("**LLM Provider 配置(实际生效)**")
                     st.code(
-                        f"OPENAI_MODEL       = {os.getenv('OPENAI_MODEL', '(unset → glm-4-flash)')}\n"
-                        f"OPENAI_BASE_URL    = {os.getenv('OPENAI_BASE_URL', '(unset → 智谱)')}\n"
+                        f"OPENAI_MODEL           = {os.getenv('OPENAI_MODEL', '(unset → glm-4-flash)')}\n"
+                        f"OPENAI_BASE_URL        = {os.getenv('OPENAI_BASE_URL', '(unset → 智谱)')}\n"
                         f"OPENAI_EMBEDDING_MODEL = {os.getenv('OPENAI_EMBEDDING_MODEL', '(unset → embedding-2)')}\n"
-                        f"OPENAI_API_KEY     = {'***' + os.getenv('OPENAI_API_KEY','')[-4:] if os.getenv('OPENAI_API_KEY') else '(未设)'}",
+                        f"OPENAI_API_KEY         = {'***' + os.getenv('OPENAI_API_KEY','')[-4:] if os.getenv('OPENAI_API_KEY') else '(未设)'}",
                         language="text",
                     )
-                    st.caption(
-                        "如果上面 model/base_url 不是你预期的,说明 expander 里改的 env 没被本次按钮接受 —— "
-                        "需要先点保存 / 改完后再点'运行'。"
+
+                    st.write(
+                        f"**模块级 SYSTEM_PROMPT — patch 是否生效**\n\n"
+                        f"长度 = `{len(_agent.SYSTEM_PROMPT)}` · "
+                        f"md5 = `{hashlib.md5(_agent.SYSTEM_PROMPT.encode('utf-8')).hexdigest()[:8]}` · "
+                        f"应该等于本次的 prompt fingerprint `{prompt_md5}`"
                     )
-                    st.write(f"**模块级 SYSTEM_PROMPT(patch 是否生效)— 长度 {len(_agent.SYSTEM_PROMPT)}**")
-                    st.code(
-                        _agent.SYSTEM_PROMPT[:500] + ("\n...(已截断)" if len(_agent.SYSTEM_PROMPT) > 500 else ""),
-                        language="text",
-                    )
+                    if hashlib.md5(_agent.SYSTEM_PROMPT.encode('utf-8')).hexdigest()[:8] != prompt_md5:
+                        st.error(
+                            "❌ **模块级 SYSTEM_PROMPT 和本次 chosen_prompt 不一致** —— "
+                            "patch 没生效或被覆盖。这就是 0 调用的根因之一。"
+                        )
+                    else:
+                        st.success("✓ patch 生效,模块 SYSTEM_PROMPT == 本次 chosen_prompt。")
+
+                    with st.expander("SYSTEM_PROMPT 全文(展开)"):
+                        st.code(_agent.SYSTEM_PROMPT, language="text")
+
                     st.write("**消息流(从 HumanMessage 到 final AIMessage)**")
                     for i, m in enumerate(result["messages"]):
                         msg_type = getattr(m, "type", type(m).__name__)
                         tcs = getattr(m, "tool_calls", None) or []
                         suffix = f"  ← tool_calls: {[tc.get('name') for tc in tcs]}" if tcs else ""
-                        body = str(getattr(m, "content", ""))[:200]
+                        body = str(getattr(m, "content", ""))[:300]
                         st.code(f"[{i}] {msg_type}{suffix}\n    {body}", language="text")
+
+                    st.write("**📋 整段诊断快照(全选复制贴给我)**")
+                    snapshot_lines = [
+                        f"click_no={click_no}",
+                        f"variant={variant}",
+                        f"model={os.getenv('OPENAI_MODEL', '(unset)')}",
+                        f"base_url={os.getenv('OPENAI_BASE_URL', '(unset)')}",
+                        f"prompt_len={len(chosen_prompt)} chosen_md5={prompt_md5} actual_md5={hashlib.md5(_agent.SYSTEM_PROMPT.encode('utf-8')).hexdigest()[:8]}",
+                        f"tool_calls_count={len(tool_calls)} save_calls_count={len(save_calls)} store_items={len(stored)}",
+                        f"messages_count={len(result['messages'])}",
+                    ]
+                    for i, m in enumerate(result["messages"]):
+                        tcs = getattr(m, "tool_calls", None) or []
+                        tc_names = [tc.get("name") for tc in tcs]
+                        snapshot_lines.append(
+                            f"  msg[{i}] type={getattr(m,'type',type(m).__name__)} "
+                            f"tool_calls={tc_names} content_preview={str(getattr(m,'content',''))[:80]!r}"
+                        )
+                    st.text_area(
+                        "snapshot",
+                        value="\n".join(snapshot_lines),
+                        height=200,
+                        label_visibility="collapsed",
+                    )
 
             except Exception as e:
                 st.exception(e)
