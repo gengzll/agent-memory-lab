@@ -43,7 +43,7 @@
 
 **技术约束**:
 - 主框架 LangGraph(已选定)
-- LLM 用国内厂商(本次用智谱 `glm-4-flash`)
+- LLM 用国内厂商(本次实测用智谱 `glm-4-flash`;代码现已抽出 [`llm_factory.py`](llm_factory.py),通过 `OPENAI_BASE_URL` / `OPENAI_MODEL` 即可切到 OpenAI / DeepSeek 等任何兼容 endpoint)
 - 公司项目代码无法直接分享 — 需要可参考的 demo
 
 **目标**:
@@ -711,9 +711,19 @@ streamlit         1.37.1
 # Windows PowerShell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
-$env:ZHIPUAI_API_KEY = "<your-key>"
-python "01_langgraph_native\run_demo.py"   # 或 02 / 03
+
+# 智谱(默认 provider,跟报告里实测一致):
+$env:OPENAI_API_KEY = "<zhipu-key>"
+# 切换 provider(任何 OpenAI 兼容服务都行):
+# $env:OPENAI_BASE_URL = "https://api.openai.com/v1"
+# $env:OPENAI_MODEL = "gpt-4o-mini"
+# $env:OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+
+python "01_langgraph_native\run_demo.py"          # 或 02 / 04
+python "03_mem0\run_demo.py" --reset              # mem0 加 --reset 清空旧记忆
 ```
+
+> 历史兼容:旧的 `ZHIPUAI_API_KEY` 仍能用 —— `llm_factory.get_api_key()` 在 `OPENAI_API_KEY` 未设时自动 fallback。
 
 ### 10.4 生产改造最小清单(基于 demo 01)
 

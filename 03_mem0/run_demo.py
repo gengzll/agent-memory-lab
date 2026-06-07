@@ -4,16 +4,26 @@
 与 01/02 的关键差异:
   chat() 在 agent.invoke 后调一次 ingest_turn(),让 mem0 自动从对话里
   抽取事实存进 memory —— 不依赖 LLM 主动调 save_memory tool。
+
+CLI:
+  python run_demo.py                  # 增量模式,沿用上次的持久化记忆
+  python run_demo.py --reset          # 清空整个 ./mem0_chroma 后重跑
+  python run_demo.py --reset-user alice  # 只清 alice 的记忆,保留 bob
 """
 
 from __future__ import annotations
 
-import os
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from langchain_core.messages import HumanMessage
 
 from agent import build_agent
-from memory_module import ingest_turn
+from llm_factory import get_api_key
+from memory_module import ingest_turn, reset_user_memory
 
 
 def chat(agent, mem, text: str, thread_id: str, user_id: str) -> str:
@@ -48,11 +58,29 @@ def dump_memory(mem, user_id: str) -> None:
         print(f"  - {it.get('memory', it)}")
 
 
-def main() -> None:
-    if not os.getenv("ZHIPUAI_API_KEY"):
-        raise RuntimeError("请先设置 ZHIPUAI_API_KEY 环境变量")
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="mem0 demo")
+    p.add_argument(
+        "--reset",
+        action="store_true",
+        help="清空整个 ./mem0_chroma 持久化目录后从零开始(所有用户的记忆都会丢)",
+    )
+    p.add_argument(
+        "--reset-user",
+        metavar="USER_ID",
+        help="只清空指定 user_id 的记忆(保留其他用户)。与 --reset 互斥",
+    )
+    return p.parse_args()
 
-    agent, mem = build_agent(model_name="glm-4-flash")
+
+def main() -> None:
+    args = parse_args()
+    get_api_key()
+    agent, mem = build_agent(reset_memory=args.reset)
+
+    if args.reset_user and not args.reset:
+        n = reset_user_memory(mem, args.reset_user)
+        print(f"[mem0] 已清空 user_id={args.reset_user} 的 {n} 条记忆")
 
     print("=" * 70)
     print("Session 1 — alice 告诉 agent 一些事实和偏好")

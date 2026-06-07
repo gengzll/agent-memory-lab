@@ -21,11 +21,15 @@
 
 from __future__ import annotations
 
-import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from langchain_core.messages import HumanMessage
 
 from agent import build_agent
+from llm_factory import get_api_key
 from memory_module import ensure_session, ensure_user, ingest_turn
 
 
@@ -67,10 +71,8 @@ def dump_facts(client, user_id: str) -> None:
 
 
 def main() -> None:
-    if not os.getenv("ZHIPUAI_API_KEY"):
-        raise RuntimeError("请先设置 ZHIPUAI_API_KEY 环境变量(LLM 用智谱 glm-4-flash)")
-
-    agent, client = build_agent(model_name="glm-4-flash")
+    get_api_key()
+    agent, client = build_agent()
 
     # Zep 需要先创建 user 和 session
     ensure_user(client, "alice")

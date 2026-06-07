@@ -4,11 +4,15 @@
 
 from __future__ import annotations
 
-import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from langchain_core.messages import HumanMessage
 
 from agent import build_agent
+from llm_factory import get_api_key
 
 
 def chat(agent, text: str, thread_id: str, user_id: str) -> str:
@@ -39,10 +43,8 @@ def dump_store(store, user_id: str) -> None:
 
 
 def main() -> None:
-    if not os.getenv("ZHIPUAI_API_KEY"):
-        raise RuntimeError("请先设置 ZHIPUAI_API_KEY 环境变量")
-
-    agent, store = build_agent(model_name="glm-4-flash")
+    get_api_key()
+    agent, store = build_agent()
 
     print("=" * 70)
     print("Session 1 — alice 告诉 agent 一些事实和偏好")

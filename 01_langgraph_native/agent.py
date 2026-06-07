@@ -16,22 +16,23 @@
         }},
     )
 
-换模型:
-  - 国内厂商: 把 ChatOpenAI 换成 langchain_community.chat_models.QianfanChatEndpoint
-    / ChatTongyi / ChatZhipuAI 等,或者用 OpenAI 兼容协议指向 DeepSeek 等:
-        ChatOpenAI(model="deepseek-chat",
-                   base_url="https://api.deepseek.com",
-                   api_key=os.environ["DEEPSEEK_API_KEY"])
+换模型: 改环境变量即可,无需改代码。见 ../llm_factory.py 顶部文档。
+  默认: 智谱 glm-4-flash + embedding-2
+  OpenAI: $env:OPENAI_BASE_URL="https://api.openai.com/v1" + $env:OPENAI_MODEL="gpt-4o-mini"
 """
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from langchain_core.messages import SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
+from llm_factory import build_llm
 from memory_module import (
     MEMORY_TOOLS,
     build_checkpointer,
@@ -50,22 +51,19 @@ SYSTEM_PROMPT = """你是一个有长期记忆的对话助手。
 
 
 def build_agent(
-    model_name: str = "glm-4-flash",
+    model_name: str | None = None,
     sqlite_path: str | None = None,
     use_embeddings: bool = True,
 ) -> tuple[Any, Any]:
     """装配一个可服务多 user/多 thread 的 agent 实例。
 
+    Args:
+        model_name: 显式覆盖 LLM 模型;为 None 时走 llm_factory 的环境变量配置。
+
     Returns:
         (agent, store) —— store 暴露出来便于 demo 时直接检视 memory
     """
-    import os
-    llm = ChatOpenAI(
-        model=model_name,
-        temperature=0,
-        api_key=os.environ["ZHIPUAI_API_KEY"],
-        base_url="https://open.bigmodel.cn/api/paas/v4/",
-    )
+    llm = build_llm(model=model_name)
     checkpointer = build_checkpointer(sqlite_path=sqlite_path)
     store = build_store(use_embeddings=use_embeddings)
 

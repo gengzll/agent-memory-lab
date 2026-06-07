@@ -4,12 +4,16 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from langchain_core.messages import SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
+from llm_factory import build_llm
 from memory_module import (
     build_checkpointer,
     build_memory,
@@ -28,16 +32,19 @@ SYSTEM_PROMPT = """你是一个有长期记忆的对话助手。
 """
 
 
-def build_agent(model_name: str = "glm-4-flash") -> tuple[Any, Any]:
-    import os
-    llm = ChatOpenAI(
-        model=model_name,
-        temperature=0,
-        api_key=os.environ["ZHIPUAI_API_KEY"],
-        base_url="https://open.bigmodel.cn/api/paas/v4/",
-    )
+def build_agent(
+    model_name: str | None = None,
+    reset_memory: bool = False,
+) -> tuple[Any, Any]:
+    """装配 mem0 版 agent。
+
+    Args:
+        reset_memory: True 时清空持久化目录后重建 mem0 实例 —— 跨进程持久化下
+            想要每次跑 demo 都从干净状态开始时打开。
+    """
+    llm = build_llm(model=model_name)
     checkpointer = build_checkpointer()
-    mem = build_memory()
+    mem = build_memory(reset=reset_memory)
     tools = make_memory_tools(mem)
 
     def dynamic_prompt(state, config):

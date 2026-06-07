@@ -16,13 +16,23 @@ Memory 模块 (mem0 版)
 
 from __future__ import annotations
 
-import os
+import sys
+from pathlib import Path
 from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 from mem0 import Memory
+
+from llm_factory import (
+    EMBEDDING_DIMS,
+    get_embedding_model,
+    get_mem0_embedder_config,
+    get_mem0_llm_config,
+)
 
 
 # ============================================================
@@ -43,38 +53,62 @@ def build_checkpointer(sqlite_path: Optional[str] = None):
 #   - embedder:   用于 m.search 的语义检索
 #   - vector_store: 这里用 chroma 本地落盘,生产可换 qdrant/pgvector/weaviate
 # ============================================================
-def build_memory(persist_dir: str = "./mem0_chroma") -> Memory:
-    # 智谱走 OpenAI 兼容协议:llm + embedder 都设 openai_base_url 指向智谱网关
-    zhipu_key = os.environ["ZHIPUAI_API_KEY"]
-    zhipu_base = "https://open.bigmodel.cn/api/paas/v4/"
+def build_memory(
+    persist_dir: str = "./mem0_chroma",
+    reset: bool = False,
+) -> Memory:
+    """mem0 实例 —— LLM/embedder 走 llm_factory,vector store 用本地 chroma。
+
+    LLM 和 embedder 都通过 OpenAI 兼容协议接入,所以智谱/OpenAI/DeepSeek/任何
+    兼容服务的 endpoint 都能直接用。换 provider 只需改 env var,不必动这段代码。
+
+    Args:
+        persist_dir: chroma 本地落盘目录。同一目录跨进程持久化共享。
+        reset: True 时在创建 Memory 前删掉整个 persist_dir(慎用,**所有用户**
+            的记忆都会被清空)。适合 demo 重跑想要干净起点的场景。
+            如果只想清某个用户的记忆,跑完后调 `mem.delete_all(user_id=...)`。
+    """
+    if reset:
+        import shutil
+        shutil.rmtree(persist_dir, ignore_errors=True)
+        print(f"[mem0] reset=True,已清空 {persist_dir}")
+
+    dims = EMBEDDING_DIMS.get(get_embedding_model(), 1024)
     config = {
-        "llm": {
-            "provider": "openai",
-            "config": {
-                "model": "glm-4-flash",
-                "temperature": 0,
-                "api_key": zhipu_key,
-                "openai_base_url": zhipu_base,
-            },
-        },
-        "embedder": {
-            "provider": "openai",
-            "config": {
-                "model": "embedding-2",  # 智谱 embedding,1024 维
-                "api_key": zhipu_key,
-                "openai_base_url": zhipu_base,
-                "embedding_dims": 1024,
-            },
-        },
+        "llm": get_mem0_llm_config(),
+        "embedder": get_mem0_embedder_config(),
         "vector_store": {
             "provider": "chroma",
             "config": {
                 "collection_name": "mem0_demo",
                 "path": persist_dir,
+                "embedding_model_dims": dims,
             },
         },
     }
     return Memory.from_config(config)
+
+
+def reset_user_memory(mem: Memory, user_id: str) -> int:
+    """清空单个用户的全部 memory。返回删除条数。
+
+    适合需要保留其他用户记忆但只重置某个用户的场景(测试隔离、用户主动注销等)。
+    """
+    try:
+        items = mem.get_all(filters={"user_id": user_id})
+        items = items.get("results", []) if isinstance(items, dict) else items
+    except Exception:
+        return 0
+    count = 0
+    for it in items:
+        mid = it.get("id") if isinstance(it, dict) else getattr(it, "id", None)
+        if mid:
+            try:
+                mem.delete(memory_id=mid)
+                count += 1
+            except Exception:
+                pass
+    return count
 
 
 # ============================================================

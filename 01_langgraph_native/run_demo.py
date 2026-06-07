@@ -11,18 +11,28 @@ Session 2 (thread_id=t2, user_id=alice)   ← 新 thread,短期记忆清零!
   → 回答应当遵循 alice 在 t1 透露的偏好。
 
 跑法:
-    set OPENAI_API_KEY=sk-...        # PowerShell: $env:OPENAI_API_KEY="sk-..."
     pip install -r requirements.txt
+    # 智谱(默认):
+    $env:OPENAI_API_KEY = "<zhipu-key>"
+    # OpenAI:
+    $env:OPENAI_API_KEY = "sk-..."
+    $env:OPENAI_BASE_URL = "https://api.openai.com/v1"
+    $env:OPENAI_MODEL = "gpt-4o-mini"
+    $env:OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
     python run_demo.py
 """
 
 from __future__ import annotations
 
-import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from langchain_core.messages import HumanMessage
 
 from agent import build_agent
+from llm_factory import get_api_key
 
 
 def chat(agent, text: str, thread_id: str, user_id: str) -> str:
@@ -57,13 +67,8 @@ def dump_store(store, user_id: str) -> None:
 
 
 def main() -> None:
-    if not os.getenv("ZHIPUAI_API_KEY"):
-        raise RuntimeError(
-            "请先设置 ZHIPUAI_API_KEY。\n"
-            "  PowerShell: $env:ZHIPUAI_API_KEY=\"<your-key>\""
-        )
-
-    agent, store = build_agent(model_name="glm-4-flash")
+    get_api_key()  # 没配 key 在此抛错,信息更明确
+    agent, store = build_agent()
 
     print("=" * 70)
     print("Session 1 — alice 告诉 agent 一些事实和偏好")

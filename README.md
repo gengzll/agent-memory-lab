@@ -63,22 +63,53 @@ For offline / mainland China:
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-### 2. Set API key (we use ZhipuAI `glm-4-flash` via OpenAI-compatible)
+### 2. Set API key
+
+All demos route through `llm_factory.py` (repo root) — one set of env vars, every demo follows.
+
+**Default — ZhipuAI `glm-4-flash` + `embedding-2`** (only `OPENAI_API_KEY` needed):
 
 ```powershell
-# Windows PowerShell
-$env:ZHIPUAI_API_KEY = "<your-key>"
+$env:OPENAI_API_KEY = "<your-zhipu-key>"
 $env:PYTHONIOENCODING = "utf-8"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 ```
+
+**Switch provider** — override `OPENAI_BASE_URL` / `OPENAI_MODEL` / `OPENAI_EMBEDDING_MODEL`:
+
+```powershell
+# Official OpenAI
+$env:OPENAI_API_KEY = "sk-..."
+$env:OPENAI_BASE_URL = "https://api.openai.com/v1"
+$env:OPENAI_MODEL = "gpt-4o-mini"
+$env:OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+
+# DeepSeek (LLM) + ZhipuAI (embedding — DeepSeek 没有 embedding service)
+$env:OPENAI_API_KEY = "<deepseek-key>"
+$env:OPENAI_BASE_URL = "https://api.deepseek.com"
+$env:OPENAI_MODEL = "deepseek-chat"
+$env:ZHIPUAI_API_KEY = "<zhipu-key>"     # embedding 仍走智谱
+$env:OPENAI_EMBEDDING_MODEL = "embedding-2"
+```
+
+> **历史兼容**: 老的 `ZHIPUAI_API_KEY` 仍能用 —— 当 `OPENAI_API_KEY` 未设置时,`llm_factory` 会自动 fallback。Demo 05 (Letta) 自带 LLM,不走这套工厂。
 
 ### 3. Run any demo
 
 ```powershell
 python "01_langgraph_native/run_demo.py"   # ⭐ simplest, no external service
-python "02_langmem/run_demo.py"            # ⭐⭐ langmem factory tools
+python "02_langmem/run_demo.py"            # ⭐⭐ langmem factory tools (现在支持 update/delete)
 python "03_mem0/run_demo.py"               # ⭐⭐⭐ Mem0 self-host (auto chroma persist)
 ```
+
+**Mem0 持久化清理** — `03_mem0/run_demo.py` 会把记忆写到 `./mem0_chroma/`,跨进程累积。重置 CLI 开关:
+
+```powershell
+python "03_mem0/run_demo.py" --reset                # 清空整个 chroma 目录后重跑
+python "03_mem0/run_demo.py" --reset-user alice     # 只清 alice,保留其他用户
+```
+
+Demo 01/02/04 用 `InMemoryStore`,进程退出就清空,不需要 reset。
 
 For 04 (Zep) and 05 (Letta), see their own files — both need an external service.
 
@@ -92,7 +123,7 @@ For 04 (Zep) and 05 (Letta), see their own files — both need an external servi
 streamlit run app.py
 ```
 
-Browse 9 sections including: side-by-side demo comparison, prompt experiments, industry product comparison, and an interactive prompt tester (paste your key, run live).
+Browse 9 sections including: side-by-side demo comparison, prompt experiments, industry product comparison, and an interactive prompt tester. Section 9 lets you **switch provider in the UI** — paste key, override `OPENAI_BASE_URL` / `OPENAI_MODEL` / `OPENAI_EMBEDDING_MODEL`, then run live against any OpenAI-compatible endpoint.
 
 ## 🧪 Bonus: prompt engineering experiment
 
@@ -107,6 +138,7 @@ agent-memory-lab/
 ├── README.md                          ← you are here
 ├── REPORT.md                          ← detailed empirical report
 ├── app.py                             ← Streamlit interactive report
+├── llm_factory.py                     ← 共享 LLM/embedding 工厂(env-var 驱动 provider)
 ├── requirements.txt                   ← combined deps
 │
 ├── 01_langgraph_native/               ⭐ hand-rolled tools

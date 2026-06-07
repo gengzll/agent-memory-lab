@@ -21,10 +21,13 @@ prompt 自动召回:
 
 from __future__ import annotations
 
-import os
+import sys
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated, List, Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
@@ -32,6 +35,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import InjectedStore
 from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
+
+from llm_factory import build_embeddings, get_api_key
 
 
 # ============================================================
@@ -76,17 +81,19 @@ def build_store(use_embeddings: bool = True) -> BaseStore:
         from langgraph.store.postgres import PostgresStore
         return PostgresStore.from_conn_string(os.environ["PG_DSN"])
     """
-    if use_embeddings and os.getenv("ZHIPUAI_API_KEY"):
-        # 智谱原生 embedding-2 维度 1024
-        from langchain_community.embeddings import ZhipuAIEmbeddings
+    if use_embeddings:
+        try:
+            embeddings, dims = build_embeddings()
+        except Exception:
+            # 没配 key 时降级到纯 KV(仍能 put/get,search 只能列举 namespace)
+            return InMemoryStore()
         return InMemoryStore(
             index={
-                "embed": ZhipuAIEmbeddings(model="embedding-2"),
-                "dims": 1024,
+                "embed": embeddings,
+                "dims": dims,
                 "fields": ["content"],  # 对 value["content"] 做向量化
             }
         )
-    # 降级: 无 embedding,仍能 put/get,search 只能列举 namespace
     return InMemoryStore()
 
 

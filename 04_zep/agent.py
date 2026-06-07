@@ -4,12 +4,16 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from langchain_core.messages import SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
+from llm_factory import build_llm
 from memory_module import (
     build_checkpointer,
     build_zep_client,
@@ -28,14 +32,8 @@ SYSTEM_PROMPT = """你是一个有长期记忆的对话助手。
 """
 
 
-def build_agent(model_name: str = "glm-4-flash") -> tuple[Any, Any]:
-    import os
-    llm = ChatOpenAI(
-        model=model_name,
-        temperature=0,
-        api_key=os.environ["ZHIPUAI_API_KEY"],
-        base_url="https://open.bigmodel.cn/api/paas/v4/",
-    )
+def build_agent(model_name: str | None = None) -> tuple[Any, Any]:
+    llm = build_llm(model=model_name)
     checkpointer = build_checkpointer()
     client = build_zep_client()
     tools = make_memory_tools(client)

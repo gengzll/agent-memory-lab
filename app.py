@@ -871,19 +871,55 @@ elif section == SECTIONS[8]:
         "实时跑一次 demo 01 — 输入消息,选 prompt variant,看 LLM 是否真的调用 `save_memory`。"
     )
 
+    current_model = os.getenv("OPENAI_MODEL", "glm-4-flash")
     st.warning(
-        "⚠️ 这个测试会**实际调用智谱 API**(用你的 key)。每次大概 0.001 元成本。"
+        f"⚠️ 这个测试会**实际调用 LLM API**(用你的 key)。"
+        f"当前 model:`{current_model}`(智谱 glm-4-flash 每次约 0.001 元)。"
     )
 
-    with st.expander("⚙️ 配置 ZHIPUAI_API_KEY", expanded=not os.getenv("ZHIPUAI_API_KEY")):
-        key_input = st.text_input(
-            "ZHIPUAI_API_KEY",
-            value=os.getenv("ZHIPUAI_API_KEY", ""),
-            type="password",
-            help="key 只在 streamlit session 中保留,不写入磁盘",
+    with st.expander(
+        "⚙️ 配置 LLM Provider",
+        expanded=not (os.getenv("OPENAI_API_KEY") or os.getenv("ZHIPUAI_API_KEY")),
+    ):
+        st.caption(
+            "默认走智谱 `glm-4-flash` + `embedding-2`。切到 OpenAI / DeepSeek 等"
+            "OpenAI 兼容服务,改下方 Base URL + Model 即可。所有字段仅 streamlit "
+            "session 内保留,不写盘。"
         )
+        key_input = st.text_input(
+            "OPENAI_API_KEY",
+            value=os.getenv("OPENAI_API_KEY") or os.getenv("ZHIPUAI_API_KEY", ""),
+            type="password",
+            help="主 API key。未设置时,llm_factory 会 fallback 到 ZHIPUAI_API_KEY",
+        )
+        c1, c2 = st.columns(2)
+        base_url_input = c1.text_input(
+            "OPENAI_BASE_URL",
+            value=os.getenv("OPENAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4/"),
+            help="OpenAI 兼容 endpoint。"
+            "智谱=`https://open.bigmodel.cn/api/paas/v4/` / "
+            "OpenAI=`https://api.openai.com/v1` / "
+            "DeepSeek=`https://api.deepseek.com`",
+        )
+        model_input = c2.text_input(
+            "OPENAI_MODEL",
+            value=os.getenv("OPENAI_MODEL", "glm-4-flash"),
+            help="glm-4-flash / gpt-4o-mini / deepseek-chat ...",
+        )
+        embed_input = st.text_input(
+            "OPENAI_EMBEDDING_MODEL",
+            value=os.getenv("OPENAI_EMBEDDING_MODEL", "embedding-2"),
+            help="embedding-2(智谱,1024d) / text-embedding-3-small(OpenAI,1536d)",
+        )
+
         if key_input:
-            os.environ["ZHIPUAI_API_KEY"] = key_input
+            os.environ["OPENAI_API_KEY"] = key_input
+        if base_url_input:
+            os.environ["OPENAI_BASE_URL"] = base_url_input
+        if model_input:
+            os.environ["OPENAI_MODEL"] = model_input
+        if embed_input:
+            os.environ["OPENAI_EMBEDDING_MODEL"] = embed_input
 
     st.markdown("---")
 
@@ -970,17 +1006,26 @@ elif section == SECTIONS[8]:
     with st.expander("查看当前 prompt 全文"):
         st.code(PROMPT_VARIANTS[variant], language="text")
 
-    if st.button("🚀 运行 demo 01(实际调用智谱)", type="primary", use_container_width=True):
-        if not os.getenv("ZHIPUAI_API_KEY"):
-            st.error("请先填入 ZHIPUAI_API_KEY")
+    runtime_model = os.getenv("OPENAI_MODEL", "glm-4-flash")
+    if st.button(
+        f"🚀 运行 demo 01(实际调用 {runtime_model})",
+        type="primary",
+        use_container_width=True,
+    ):
+        if not (os.getenv("OPENAI_API_KEY") or os.getenv("ZHIPUAI_API_KEY")):
+            st.error("请先填入 OPENAI_API_KEY(或 ZHIPUAI_API_KEY 作为 fallback)")
         else:
             from pathlib import Path
-            sys.path.insert(0, str(Path(__file__).resolve().parent / "01_langgraph_native"))
+            repo_root = Path(__file__).resolve().parent
+            # 让 llm_factory 和 demo 01 都能被 import
+            for p in (str(repo_root), str(repo_root / "01_langgraph_native")):
+                if p not in sys.path:
+                    sys.path.insert(0, p)
 
             try:
-                with st.spinner("调用智谱 glm-4-flash,等 5-15 秒..."):
-                    # 重置 module cache 防 prompt patch 不生效
-                    for mod in ("agent", "memory_module"):
+                with st.spinner(f"调用 {runtime_model},等 5-15 秒..."):
+                    # 重置 module cache 防 prompt patch / env 切换不生效
+                    for mod in ("agent", "memory_module", "llm_factory"):
                         if mod in sys.modules:
                             del sys.modules[mod]
                     import agent as _agent

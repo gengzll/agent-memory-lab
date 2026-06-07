@@ -4,12 +4,16 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from langchain_core.messages import SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
+from llm_factory import build_llm
 from memory_module import (
     MEMORY_TOOLS,
     build_checkpointer,
@@ -21,24 +25,22 @@ from memory_module import (
 SYSTEM_PROMPT = """你是一个有长期记忆的对话助手。
 
 记忆使用规则:
-1. 当用户透露偏好/事实/约定时,主动调用 manage_memory 工具记下,并简短确认"已记住"。
+1. 处理新的偏好/事实/约定时,根据情况调用 manage_memory:
+   - 全新事实           → action="create", content=<新内容>(不要带 id)
+   - 修正/补充下方某条已有 memory → action="update", id=<那条的 id>, content=<新内容>
+   - 用户明确撤销/否定下方某条     → action="delete", id=<那条的 id>
+   操作后简短确认"已记住"/"已更新"/"已删除"。
 2. 回答前如果不确定用户背景,先调用 search_memory 检索。
-3. 每轮我会把 top-3 相关记忆自动拼在下方;能直接用就别再多调一次 search_memory。
+3. 每轮我会把 top-3 相关记忆自动拼在下方(带 id);能直接用就别再多调一次 search_memory。
 """
 
 
 def build_agent(
-    model_name: str = "glm-4-flash",
+    model_name: str | None = None,
     sqlite_path: str | None = None,
     use_embeddings: bool = True,
 ) -> tuple[Any, Any]:
-    import os
-    llm = ChatOpenAI(
-        model=model_name,
-        temperature=0,
-        api_key=os.environ["ZHIPUAI_API_KEY"],
-        base_url="https://open.bigmodel.cn/api/paas/v4/",
-    )
+    llm = build_llm(model=model_name)
     checkpointer = build_checkpointer(sqlite_path=sqlite_path)
     store = build_store(use_embeddings=use_embeddings)
 

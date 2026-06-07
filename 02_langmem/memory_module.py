@@ -17,13 +17,18 @@ Memory 模块 (langmem 版)
 
 from __future__ import annotations
 
-import os
+import sys
+from pathlib import Path
 from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 from langmem import create_manage_memory_tool, create_search_memory_tool
+
+from llm_factory import build_embeddings
 
 
 # ============================================================
@@ -40,14 +45,13 @@ def build_checkpointer(sqlite_path: Optional[str] = None):
 # 2. 长期记忆 — 与 01 相同 (langmem 复用 LangGraph store)
 # ============================================================
 def build_store(use_embeddings: bool = True) -> BaseStore:
-    if use_embeddings and os.getenv("ZHIPUAI_API_KEY"):
-        from langchain_community.embeddings import ZhipuAIEmbeddings
+    if use_embeddings:
+        try:
+            embeddings, dims = build_embeddings()
+        except Exception:
+            return InMemoryStore()
         return InMemoryStore(
-            index={
-                "embed": ZhipuAIEmbeddings(model="embedding-2"),
-                "dims": 1024,
-                "fields": ["content"],
-            }
+            index={"embed": embeddings, "dims": dims, "fields": ["content"]}
         )
     return InMemoryStore()
 
@@ -63,6 +67,10 @@ def build_store(use_embeddings: bool = True) -> BaseStore:
 #   - langmem:    工厂直接给 create / update / delete 统一接口
 # ============================================================
 MEMORY_TOOLS = [
+    # 开放 create/update/delete 三种 action。
+    # update/delete 需要 id —— 通过 load_relevant_memories() 在 system prompt
+    # 里把已有 memory 的 id 一起注入,LLM 就不必再走 "search 拿 id → update"
+    # 两步规划,直接引用即可。这把多步推理卸到代码侧,对弱模型更鲁棒。
     create_manage_memory_tool(namespace=("memories", "{user_id}")),
     create_search_memory_tool(namespace=("memories", "{user_id}")),
 ]
@@ -87,5 +95,9 @@ def load_relevant_memories(
     bullets = []
     for r in results:
         content = r.value.get("content") if isinstance(r.value, dict) else str(r.value)
-        bullets.append(f"- {content}")
-    return "\n已知用户信息(从长期记忆召回):\n" + "\n".join(bullets) + "\n"
+        # id 一起拼出来,LLM 想 update/delete 时可直接引用,无需先 search
+        bullets.append(f"- [id={r.key}] {content}")
+    return (
+        "\n已知用户信息(从长期记忆召回,要修正/删除某条时引用对应 id):\n"
+        + "\n".join(bullets) + "\n"
+    )
