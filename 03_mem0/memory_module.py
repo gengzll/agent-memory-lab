@@ -27,12 +27,7 @@ from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 from mem0 import Memory
 
-from llm_factory import (
-    EMBEDDING_DIMS,
-    get_embedding_model,
-    get_mem0_embedder_config,
-    get_mem0_llm_config,
-)
+from llm_factory import get_mem0_embedder_config, get_mem0_llm_config
 
 
 # ============================================================
@@ -73,7 +68,6 @@ def build_memory(
         shutil.rmtree(persist_dir, ignore_errors=True)
         print(f"[mem0] reset=True,已清空 {persist_dir}")
 
-    dims = EMBEDDING_DIMS.get(get_embedding_model(), 1024)
     config = {
         "llm": get_mem0_llm_config(),
         "embedder": get_mem0_embedder_config(),
@@ -82,7 +76,6 @@ def build_memory(
             "config": {
                 "collection_name": "mem0_demo",
                 "path": persist_dir,
-                "embedding_model_dims": dims,
             },
         },
     }
