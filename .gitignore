@@ -16,6 +16,8 @@ mem0_chroma/
 *.sqlite3
 *.db
 checkpoints.sqlite
+01_langgraph_native/store.json
+02_langmem/store.json
 
 # 环境变量(API key)
 .env

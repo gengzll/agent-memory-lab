@@ -29,6 +29,7 @@ from langgraph.store.memory import InMemoryStore
 from langmem import create_manage_memory_tool, create_search_memory_tool
 
 from llm_factory import build_embeddings
+from persistent_store import PersistentInMemoryStore, reset_user
 
 
 # ============================================================
@@ -44,15 +45,23 @@ def build_checkpointer(sqlite_path: Optional[str] = None):
 # ============================================================
 # 2. 长期记忆 — 与 01 相同 (langmem 复用 LangGraph store)
 # ============================================================
-def build_store(use_embeddings: bool = True) -> BaseStore:
+def build_store(
+    use_embeddings: bool = True,
+    persist_path: Optional[str] = None,
+) -> BaseStore:
+    """长期记忆 store。persist_path 非 None 时跨进程持久化到 JSON 文件。"""
+    index = None
     if use_embeddings:
         try:
             embeddings, dims = build_embeddings()
+            index = {"embed": embeddings, "dims": dims, "fields": ["content"]}
         except Exception:
-            return InMemoryStore()
-        return InMemoryStore(
-            index={"embed": embeddings, "dims": dims, "fields": ["content"]}
-        )
+            index = None
+
+    if persist_path:
+        return PersistentInMemoryStore(persist_path=persist_path, index=index)
+    if index is not None:
+        return InMemoryStore(index=index)
     return InMemoryStore()
 
 

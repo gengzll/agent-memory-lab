@@ -37,6 +37,7 @@ from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 
 from llm_factory import build_embeddings, get_api_key
+from persistent_store import PersistentInMemoryStore, reset_user
 
 
 # ============================================================
@@ -66,11 +67,18 @@ def build_checkpointer(sqlite_path: Optional[str] = None):
 # ============================================================
 # 2 + 3. 长期记忆 + 语义召回: Store
 # ============================================================
-def build_store(use_embeddings: bool = True) -> BaseStore:
+def build_store(
+    use_embeddings: bool = True,
+    persist_path: Optional[str] = None,
+) -> BaseStore:
     """长期记忆,跨 thread / 跨 session 共享。
 
     use_embeddings=True : 启用向量索引,store.search() 走语义相似度
     use_embeddings=False: 纯 KV,store.search() 只按 namespace 列举(无 OPENAI_API_KEY 时降级)
+
+    persist_path=None : 进程内 InMemoryStore,重启即丢(适合单元测试)
+    persist_path=str  : PersistentInMemoryStore,put/delete 后写盘,启动时从 JSON 恢复 ——
+                        每个 user_id 的 history 跨进程持久化共享
 
     生产换 PostgresStore(同样支持 embeddings):
 
@@ -81,19 +89,23 @@ def build_store(use_embeddings: bool = True) -> BaseStore:
         from langgraph.store.postgres import PostgresStore
         return PostgresStore.from_conn_string(os.environ["PG_DSN"])
     """
+    index = None
     if use_embeddings:
         try:
             embeddings, dims = build_embeddings()
-        except Exception:
-            # 没配 key 时降级到纯 KV(仍能 put/get,search 只能列举 namespace)
-            return InMemoryStore()
-        return InMemoryStore(
-            index={
+            index = {
                 "embed": embeddings,
                 "dims": dims,
                 "fields": ["content"],  # 对 value["content"] 做向量化
             }
-        )
+        except Exception:
+            # 没配 key 时降级到纯 KV
+            index = None
+
+    if persist_path:
+        return PersistentInMemoryStore(persist_path=persist_path, index=index)
+    if index is not None:
+        return InMemoryStore(index=index)
     return InMemoryStore()
 
 

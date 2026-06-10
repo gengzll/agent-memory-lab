@@ -54,18 +54,20 @@ def build_agent(
     model_name: str | None = None,
     sqlite_path: str | None = None,
     use_embeddings: bool = True,
+    persist_path: str | None = None,
 ) -> tuple[Any, Any]:
     """装配一个可服务多 user/多 thread 的 agent 实例。
 
     Args:
         model_name: 显式覆盖 LLM 模型;为 None 时走 llm_factory 的环境变量配置。
+        persist_path: 长期记忆 store 的持久化 JSON 文件;为 None 时纯内存。
 
     Returns:
         (agent, store) —— store 暴露出来便于 demo 时直接检视 memory
     """
     llm = build_llm(model=model_name)
     checkpointer = build_checkpointer(sqlite_path=sqlite_path)
-    store = build_store(use_embeddings=use_embeddings)
+    store = build_store(use_embeddings=use_embeddings, persist_path=persist_path)
 
     def dynamic_prompt(state, config):
         """每次 invoke 时动态构造 system message:基础 prompt + top-k 相关 memory。"""

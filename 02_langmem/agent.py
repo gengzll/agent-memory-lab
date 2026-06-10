@@ -39,10 +39,12 @@ def build_agent(
     model_name: str | None = None,
     sqlite_path: str | None = None,
     use_embeddings: bool = True,
+    persist_path: str | None = None,
 ) -> tuple[Any, Any]:
+    """persist_path: 长期记忆 store 的 JSON 持久化文件;None 时纯内存。"""
     llm = build_llm(model=model_name)
     checkpointer = build_checkpointer(sqlite_path=sqlite_path)
-    store = build_store(use_embeddings=use_embeddings)
+    store = build_store(use_embeddings=use_embeddings, persist_path=persist_path)
 
     def dynamic_prompt(state, config):
         user_id = config["configurable"].get("user_id", "anonymous")
