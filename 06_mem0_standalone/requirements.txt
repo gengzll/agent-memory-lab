@@ -1,0 +1,17 @@
+# Demo 06: mem0 standalone —— 不依赖 LangGraph,直接调 LLM endpoint
+#
+# 对比 03_mem0:同样用 mem0,但去掉了 langgraph / langchain 全家桶,
+# 只留 mem0 + 官方 openai SDK。这是 mem0 的"原生"用法。
+
+mem0ai>=2.0.2          # 长期记忆:自动抽取 + chroma 持久化
+chromadb               # mem0 的向量后端
+openai>=1.0            # 直接调 LLM endpoint(OpenAI 兼容协议)
+
+# LLM endpoint 通过环境变量配置(详见 ../llm_factory.py):
+#   OPENAI_API_KEY    默认智谱 key(也兼容 OpenAI / DeepSeek)
+#   OPENAI_BASE_URL   默认 https://open.bigmodel.cn/api/paas/v4/
+#   OPENAI_MODEL      默认 glm-4-flash
+#
+# 注意:llm_factory.py 在仓库根目录,本 demo 通过 sys.path 注入复用它。
+# 如果你想把本 demo 拷出去独立用,把 llm_factory 里 get_api_key/get_base_url/
+# get_model/get_mem0_*_config 几个函数一起带走即可。

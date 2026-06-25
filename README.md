@@ -17,7 +17,7 @@ This repo provides **5 demos** (3 fully tested end-to-end on your laptop, 2 code
 
 > **This repo focuses on the *memory* dimension only.** Agent framework selection (LangGraph vs Letta vs CrewAI vs AutoGen vs LlamaIndex) is a separate orthogonal question we do **not** unpack here. We assume **LangGraph is your main framework** and explore which memory backend fits — with one explicit exception: Letta (demo 05) is itself a full agent runtime that *replaces* LangGraph, included because its three-tier memory architecture is too important to skip.
 
-## 📚 The 5 demos — from simple to complex
+## 📚 The demos — from simple to complex
 
 | # | Demo | GitHub ⭐ | Complexity | External deps | Core idea |
 |---|---|---|---|---|---|
@@ -26,8 +26,11 @@ This repo provides **5 demos** (3 fully tested end-to-end on your laptop, 2 code
 | 03 | [`03_mem0`](03_mem0/) | [**57k**](https://github.com/mem0ai/mem0) | ⭐⭐⭐ | +mem0 +chroma | **Server-side LLM auto-extracts** facts every turn; persists to disk by default |
 | 04 | [`04_zep`](04_zep/) | [4.6k](https://github.com/getzep/zep) | ⭐⭐⭐⭐ | +Zep server | Knowledge graph + temporal facts (`valid_from` / `valid_to`) + auto session summary |
 | 05 | [`05_letta`](05_letta/) | [23k](https://github.com/letta-ai/letta) | ⭐⭐⭐⭐⭐ | +Letta server | **Full agent runtime** (NOT a LangGraph plug-in!) — three-tier memory: core / recall / archival |
+| 06 | [`06_mem0_standalone`](06_mem0_standalone/) | (same mem0) | ⭐⭐ | +mem0 +openai | **mem0 without LangGraph** — raw `openai` SDK loop + `mem.add()` / `mem.search()`; proves mem0 is a standalone lib, not a framework component |
 
 > Star counts as of 2026-05. Note **mem0 has the most stars by far** — but that's not the same as "most appropriate for your case"; see [REPORT § 8](REPORT.md#8-选型决策框架) for selection criteria.
+
+> **Demo 06 is an orthogonal cut, not a step up the ladder.** It re-implements demo 03's mem0 usage with *zero* LangGraph — answering "如果我自己调 LLM endpoint,不用任何 agent 框架,还能用 mem0 吗?" (yes). The `build_memory` / `load_relevant_memories` / `ingest_turn` functions are byte-for-byte identical to demo 03 — only the LangGraph tool-binding glue is dropped.
 
 ### Capability ladder
 
@@ -45,6 +48,11 @@ This repo provides **5 demos** (3 fully tested end-to-end on your laptop, 2 code
                   ↓ paradigm shift (not "more layers" — different framework):
  05 letta (MemGPT)          — abandons LangGraph; LLM-as-OS pages memory in/out
                               core memory always in context, archival is infinite disk
+
+ ── orthogonal cut (not "more layers" — fewer) ──
+ 06 mem0_standalone         — demo 03's mem0, minus LangGraph: raw openai SDK
+                              loop. Shows mem0 ≠ framework component; you keep
+                              mem.add()/search() and write your own chat loop.
 ```
 
 Read [REPORT.md](REPORT.md) for full implementation details, empirical data, and decision framework.
@@ -100,17 +108,20 @@ $env:OPENAI_EMBEDDING_MODEL = "embedding-2"
 python "01_langgraph_native/run_demo.py"   # ⭐ simplest, no external service
 python "02_langmem/run_demo.py"            # ⭐⭐ langmem factory tools (现在支持 update/delete)
 python "03_mem0/run_demo.py"               # ⭐⭐⭐ Mem0 self-host (auto chroma persist)
+python "06_mem0_standalone/run_demo.py"    # ⭐⭐ mem0 WITHOUT LangGraph (raw openai SDK)
+python "06_mem0_standalone/run_demo.py" --interactive   # 自己跟它聊
 ```
 
-**持久化** — Demo 01 / 02 / 03 现在默认都把记忆按 `user_id` 落盘,**跨进程恢复**。Demo 04 走 Zep server 的 session 数据,Demo 05 走 Letta 自己的数据库,无需本地落盘。
+**持久化** — Demo 01 / 02 / 03 / 06 现在默认都把记忆按 `user_id` 落盘,**跨进程恢复**。Demo 04 走 Zep server 的 session 数据,Demo 05 走 Letta 自己的数据库,无需本地落盘。
 
 | Demo | 持久化方式 | 落盘位置(默认) | 跨进程清理命令 |
 |---|---|---|---|
 | **01 langgraph_native** | `PersistentInMemoryStore`(JSON,继承 InMemoryStore) | `./01_langgraph_native/store.json` | `--reset` 全清 / `--reset-user alice` 单用户 / `--no-persist` 关闭持久化 |
 | **02 langmem** | 同上 | `./02_langmem/store.json` | 同上 |
 | **03 mem0** | chroma 向量库本地落盘 | `./mem0_chroma/` | `--reset` 全清 / `--reset-user alice` 单用户 |
+| **06 mem0_standalone** | chroma(同 03,但无 LangGraph) | `./06_mem0_standalone/mem0_chroma_standalone/` | `--reset` 全清 / `--reset-user alice` 单用户 |
 
-所有 `store.json` / `mem0_chroma/` 已经写进 `.gitignore`,不会被推到 GitHub。
+所有 `store.json` / `mem0_chroma*/` 已经写进 `.gitignore`,不会被推到 GitHub。
 
 ```powershell
 # 看 alice 跨进程能不能恢复
@@ -155,6 +166,7 @@ agent-memory-lab/
 ├── 03_mem0/                           ⭐⭐⭐ auto fact extraction(chroma 持久化)
 ├── 04_zep/                            ⭐⭐⭐⭐ knowledge graph + temporal
 ├── 05_letta/                          ⭐⭐⭐⭐⭐ full agent runtime
+├── 06_mem0_standalone/                ⭐⭐ mem0 without LangGraph(raw openai SDK)
 │
 └── experiments/                       ← supporting experiments
     ├── prompt_variants.py             ← 4 prompts × 2 inputs hit-rate analysis
